@@ -273,7 +273,7 @@ Configured in `.mcp.json`. Honest state of each integration:
 |---|---|---|
 | GitHub | PR signals, repo changes, raise PRs | Wired — `@modelcontextprotocol/server-github` (stdio); set `GITHUB_PERSONAL_ACCESS_TOKEN` |
 | Atlassian (Jira + Confluence) | Stories, AC, incident tickets, BRDs, ADRs | Wired — hosted SSE server at `https://mcp.atlassian.com/v1/sse`; auth via Claude Code's `/mcp` OAuth flow |
-| GCP (Log Explorer, Cloud Monitoring) | Production signals for Coverage + Incident agents | **Not configured.** No widely-available official MCP server. Workarounds: paste log output / alert details when invoking agents, or wire a custom MCP server. |
+| GCP (Log Explorer, Cloud Monitoring) | Production signals for Coverage + Incident agents | **Not configured.** No widely-available official MCP server but have a local project level observability skill. Workarounds: Skill already generates output RCA format, or wire a custom MCP server. |
 | OTEL (traces, spans, latency) | Trace-driven gap analysis | **Not configured.** No widely-available official MCP server. Same workarounds. |
 
 Agents are written to degrade gracefully when MCP tools are absent — every command prompt instructs them to "work with pasted input" if the relevant MCP is not connected.
