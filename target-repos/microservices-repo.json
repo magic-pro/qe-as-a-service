@@ -1,0 +1,37 @@
+{
+  "name": "microservices-repo",
+  "description": "Golang microservices — business and platform layer services with Go tests",
+  "repo_url": "REPLACE_WITH_GITHUB_REPO_URL",
+  "default_branch": "main",
+  "languages": ["go"],
+  "test_framework": "go test",
+  "test_paths": {
+    "unit_tests": "./**/*_test.go",
+    "integration_tests": "tests/integration/",
+    "generated_tests_target": "tests/generated/"
+  },
+  "ci_config": ".github/workflows/",
+  "key_directories": {
+    "services": "services/",
+    "shared": "shared/",
+    "proto": "proto/",
+    "migrations": "migrations/"
+  },
+  "infrastructure": {
+    "compute": ["GKE", "Cloud Run"],
+    "data": ["CloudSQL", "Firestore", "BigQuery", "Pub/Sub", "Kafka"],
+    "networking": ["API Gateway", "Load Balancer", "VPC", "Istio"]
+  },
+  "finance_constraints": {
+    "monetary_type": "decimal.Decimal (shopspring/decimal or equivalent)",
+    "pii_fields": ["customer_name", "email", "dob", "account_number", "phone"],
+    "regulatory_fields": ["currency_code", "transaction_date", "account_number_iban", "swift_bic", "sort_code"],
+    "audit_fields": ["user_id", "action", "timestamp", "request_id", "correlation_id"]
+  },
+  "test_patterns": {
+    "style": "table-driven",
+    "fixture_location": "helpers/",
+    "integration_tag": "//go:build integration",
+    "performance_tag": "//go:build performance"
+  }
+}

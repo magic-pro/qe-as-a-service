@@ -1,0 +1,78 @@
+name: QEaaS — Nightly Coverage & Gap Scan
+
+on:
+  schedule:
+    - cron: '0 3 * * *'     # 03:00 UTC nightly
+  workflow_dispatch:
+    inputs:
+      since_hours:
+        description: 'Scan window in hours (default: 24)'
+        required: false
+        default: '24'
+      target_repo:
+        description: 'Target repo (identity | microservices | both)'
+        required: false
+        default: 'both'
+
+jobs:
+  coverage-scan:
+    name: Coverage & Gap Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Invoke Coverage & Gap Analysis Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SINCE_HOURS: ${{ github.event.inputs.since_hours || '24' }}
+          TARGET_REPO: ${{ github.event.inputs.target_repo || 'both' }}
+        run: |
+          echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > /tmp/gcp-sa.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-sa.json
+
+          claude -p \
+            "Use the coverage-agent subagent for this task.
+
+             Run nightly coverage scan.
+             Scan window: last $SINCE_HOURS hours.
+             Target repos: $TARGET_REPO.
+
+             Steps:
+             1. Query GCP Log Explorer for new log patterns
+             2. Query OTEL for new trace spans
+             3. Compare against existing test coverage in target repos
+             4. Write gap report to artifacts/coverage-gap-report.md
+             5. Raise PRs on target repos for any .qe/ map updates needed
+             6. Output structured test creation requests
+
+             Finance priorities: flag any uncovered monetary, KYC, AML,
+             regulatory, or audit trail patterns as Critical regardless of frequency."
+
+      - name: Upload gap report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-gap-report-${{ github.run_id }}
+          path: artifacts/coverage-gap-report.md
+          retention-days: 30
+
+      - name: Post summary to workflow
+        if: always()
+        run: |
+          if [ -f artifacts/coverage-gap-report.md ]; then
+            echo "## Coverage Gap Report" >> $GITHUB_STEP_SUMMARY
+            cat artifacts/coverage-gap-report.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No gap report generated." >> $GITHUB_STEP_SUMMARY
+          fi

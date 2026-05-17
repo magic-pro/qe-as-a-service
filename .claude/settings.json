@@ -1,0 +1,24 @@
+{
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Read(artifacts/**)",
+      "Write(artifacts/**)",
+      "Read(generated-tests/**)",
+      "Write(generated-tests/**)",
+      "Read(templates/**)",
+      "Write(templates/**)",
+      "Read(target-repos/**)",
+      "Read(.claude/agents/**)",
+      "Read(.claude/commands/**)",
+      "Bash(find . -type f -name '*.md')",
+      "Bash(find . -type f -name '*.json')",
+      "Bash(find . -type f -name '*.yml')",
+      "Bash(find . -type f -name '*.go')",
+      "Bash(find . -type f -name '*.py')"
+    ]
+  }
+}

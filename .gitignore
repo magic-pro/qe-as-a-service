@@ -1,0 +1,27 @@
+# Claude Code local settings (per-machine; contains absolute paths)
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets and local env
+.env
+.env.local
+*.pem
+*.key
+service-account*.json
+gcp-sa*.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Build / deploy artifacts
+*.log
+ci-output/

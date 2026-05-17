@@ -1,0 +1,32 @@
+{
+  "name": "identity-repo",
+  "description": "ForgeRock + Daon identity platform — Java/Groovy, YAML/JSON config, pytest integration tests",
+  "repo_url": "REPLACE_WITH_GITHUB_REPO_URL",
+  "default_branch": "main",
+  "languages": ["java", "groovy"],
+  "config_formats": ["yaml", "json"],
+  "test_framework": "pytest",
+  "test_paths": {
+    "integration_tests": "tests/integration/",
+    "generated_tests_target": "tests/generated/"
+  },
+  "ci_config": ".github/workflows/",
+  "key_directories": {
+    "forgerock_config": "config/forgerock/",
+    "daon_config": "config/daon/",
+    "journeys": "config/journeys/",
+    "scripts": "scripts/"
+  },
+  "identity_provider": "ForgeRock AM",
+  "idv_provider": "Daon",
+  "sandbox_urls": {
+    "forgerock": "REPLACE_WITH_FORGEROCK_SANDBOX_URL",
+    "daon": "REPLACE_WITH_DAON_SANDBOX_URL"
+  },
+  "finance_constraints": {
+    "monetary_type": "Decimal",
+    "pii_fields": ["customer_name", "email", "dob", "account_number", "phone"],
+    "regulatory_fields": ["currency_code", "transaction_date", "account_number_iban", "swift_bic"],
+    "audit_fields": ["user_id", "action", "timestamp", "ip_address", "session_id"]
+  }
+}

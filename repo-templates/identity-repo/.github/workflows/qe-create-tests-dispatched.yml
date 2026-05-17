@@ -1,0 +1,121 @@
+name: QEaaS — Test Creator (dispatched)
+
+# Triggered by the Coverage Agent or Incident Agent in the qe-as-a-service
+# repo via the GitHub workflow_dispatch API. Runs the local test-creator-agent
+# (defined in .claude/agents/test-creator-agent.md) headlessly with a structured
+# request as input, generates tests, and raises a DRAFT pull request.
+#
+# Human review on the draft PR is the approval gate — the workflow never merges.
+#
+# Also runnable manually from the Actions tab when a developer wants to invoke
+# the same generation pipeline outside the agent loop.
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_json:
+        description: 'Structured test creation request (JSON from Coverage/Incident Agent)'
+        required: true
+        type: string
+      source:
+        description: 'Originating agent: coverage | incident | manual'
+        required: false
+        type: string
+        default: 'manual'
+      ref:
+        description: 'Base ref to branch from (default: main)'
+        required: false
+        type: string
+        default: 'main'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-tests:
+    name: Generate tests via Test Creator Agent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Configure git identity for committed changes
+        run: |
+          git config user.name "qe-as-a-service[bot]"
+          git config user.email "qe-as-a-service@users.noreply.github.com"
+
+      - name: Validate request payload is JSON
+        env:
+          REQUEST: ${{ inputs.request_json }}
+        run: |
+          if ! echo "$REQUEST" | python3 -m json.tool > /dev/null 2>&1; then
+            echo "::error::request_json is not valid JSON"
+            exit 1
+          fi
+
+      - name: Invoke Test Creator Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUEST: ${{ inputs.request_json }}
+          SOURCE: ${{ inputs.source }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          claude -p \
+            "Use the test-creator-agent subagent for this task.
+
+             Structured test creation request (JSON — includes gap id, scenarios,
+             target fields, and references to .qe/ maps):
+             $REQUEST
+
+             Originating agent: $SOURCE
+             Dispatched workflow run: $RUN_URL
+
+             Steps:
+             1. Parse the request JSON to identify test type, scenarios, and field references.
+             2. Read .qe/data-type-map.md and .qe/identity-map.md for context.
+             3. Inspect existing pytest files under tests/integration/ — reuse fixtures
+                and helpers; do not duplicate.
+             4. Generate pytest test files following the patterns documented in
+                .claude/agents/test-creator-agent.md.
+             5. Create a branch from $GITHUB_REF named qe/\${SOURCE}-\$(date +%Y%m%d-%H%M%S).
+             6. Commit generated files with a clear message including the originating source.
+             7. Push the branch and open a DRAFT pull request titled:
+                  [QEaaS] Tests for <short scenario summary>
+                Body must include:
+                  - Link to this dispatched run: $RUN_URL
+                  - Originating request JSON in a collapsible <details> block
+                  - Test count per scenario category
+                  - Any scenarios from the maps not yet covered (flagged as remaining gaps)
+                  - Finance constraint compliance summary (Decimal, synthetic PII,
+                    boundary tests present)
+             8. Leave the PR as DRAFT — never merge.
+
+             Finance constraints (non-negotiable):
+             - No real PII in tests — synthetic generators only
+             - Monetary values use Decimal, never float
+             - KYC/AML/boundary scenarios are first-class tests"
+
+      - name: Notify on creator failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[QEaaS] Test Creator (dispatched) failed — manual review required',
+              body: `Test Creator could not complete the dispatched run.\n\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\nOriginating source: ${{ inputs.source }}\n\nRun \`/create-tests\` locally with the request payload to retry.`,
+              labels: ['qe-creator', 'needs-attention']
+            });

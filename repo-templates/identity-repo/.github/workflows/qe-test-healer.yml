@@ -1,0 +1,126 @@
+name: QEaaS — Test Healer
+
+on:
+  workflow_run:
+    workflows: ["*"]
+    types: [completed]
+
+jobs:
+  heal:
+    name: Analyse and heal CI failures
+    runs-on: ubuntu-latest
+    # Exclude the healer itself to prevent recursive triggering
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'failure' &&
+          github.event.workflow_run.name != 'QEaaS — Test Healer' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Download CI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ci-output/
+        continue-on-error: true
+
+      - name: Collect failure output
+        id: collect
+        run: |
+          {
+            echo "=== TEST FAILURES ==="
+            find ci-output/ -name "*.json" -o -name "*.xml" -o -name "*.log" \
+              | xargs grep -l "FAILED\|ERROR\|failure" 2>/dev/null \
+              | head -5 | xargs cat 2>/dev/null || echo "No test output found"
+
+            echo "=== SONARQUBE ==="
+            find ci-output/ -name "sonar-report*.json" 2>/dev/null | head -1 | xargs cat 2>/dev/null || echo "No SonarQube report"
+
+            echo "=== SPOTBUGS ==="
+            find ci-output/ -name "spotbugs*.xml" 2>/dev/null | head -1 | xargs cat 2>/dev/null || echo "No SpotBugs report"
+
+            echo "=== CHECKSTYLE ==="
+            find ci-output/ -name "checkstyle*.xml" 2>/dev/null | head -1 | xargs cat 2>/dev/null || echo "No Checkstyle report"
+
+            echo "=== PMD ==="
+            find ci-output/ -name "pmd*.xml" 2>/dev/null | head -1 | xargs cat 2>/dev/null || echo "No PMD report"
+          } > /tmp/failure-summary.txt
+
+          # Truncate to avoid token limits
+          head -500 /tmp/failure-summary.txt > /tmp/failure-truncated.txt
+
+          echo "FAILURE_SUMMARY<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/failure-truncated.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Detect finance-critical patterns
+        id: finance_check
+        run: |
+          FINANCE_FLAG=false
+          if grep -qiE "float|double.*amount|BigDecimal\(0\.|pii|password|secret|sql.inject" /tmp/failure-summary.txt 2>/dev/null; then
+            FINANCE_FLAG=true
+          fi
+          echo "FINANCE_FLAG=$FINANCE_FLAG" >> $GITHUB_OUTPUT
+
+      - name: Invoke QEaaS Test Healer Agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FAILURE_CONTEXT: ${{ steps.collect.outputs.FAILURE_SUMMARY }}
+          FINANCE_FLAG: ${{ steps.finance_check.outputs.FINANCE_FLAG }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          WORKFLOW_URL: ${{ github.event.workflow_run.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          claude -p \
+            "Use the test-healer-agent subagent for this task.
+
+             CI failure in: $WORKFLOW_NAME ($WORKFLOW_URL)
+             Finance-critical pattern detected: $FINANCE_FLAG
+
+             Failure output (may include test failures and/or static analysis):
+             $FAILURE_CONTEXT
+
+             Instructions:
+             - Classify all findings (test failure vs static analysis)
+             - Auto-fix safe findings (formatting, unused imports, simple lint)
+             - Escalate: security findings, finance patterns (float for money, PII in logs), regressions
+             - Never suppress findings with @SuppressWarnings or NOSONAR
+             - Never weaken assertions or remove KYC/AML/boundary tests
+             - If finance-critical patterns found: ESCALATE before touching anything
+             - Read .qe/data-type-map.md for finance context
+             - Raise a PR titled [QEaaS Heal] for any fixes"
+        continue-on-error: true
+
+      - name: Flag finance-critical findings
+        if: steps.finance_check.outputs.FINANCE_FLAG == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[QEaaS] Finance-critical pattern in CI failure — immediate review',
+              body: `Finance-critical pattern detected in CI failure.\n\nWorkflow: ${{ github.event.workflow_run.html_url }}\n\nPossible issues: float/double for monetary values, PII in logs, SQL injection risk, hardcoded credentials.\n\n**Do not suppress — fix root cause.**`,
+              labels: ['qe-healer', 'finance-critical', 'needs-attention']
+            });
+
+      - name: Notify on healer failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '[QEaaS] Test healer failed — manual review required',
+              body: `Healer could not auto-fix: ${{ github.event.workflow_run.html_url }}\n\nRun \`/heal-tests\` locally.`,
+              labels: ['qe-healer', 'needs-attention']
+            });

@@ -1,0 +1,57 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: qe-as-a-service-webhook
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/execution-environment: gen2
+        # CPU is always allocated so fire-and-forget agent subprocesses
+        # spawned by the webhook handler can run to completion after the
+        # HTTP request returns. Increases cost vs request-based billing.
+        # For production-grade reliability replace with Cloud Tasks / Jobs.
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      serviceAccountName: qe-webhook-sa@REPLACE_GCP_PROJECT_ID.iam.gserviceaccount.com
+      timeoutSeconds: 300
+      containers:
+        - image: REPLACE_GCP_REGION-docker.pkg.dev/REPLACE_GCP_PROJECT_ID/qe-as-a-service/qe-as-a-service-webhook:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: anthropic-api-key
+                  key: latest
+            - name: GITHUB_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: github-webhook-secret
+                  key: latest
+            - name: JIRA_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jira-webhook-secret
+                  key: latest
+            - name: CONFLUENCE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: confluence-webhook-secret
+                  key: latest
+            - name: PUBSUB_PUSH_AUDIENCE
+              valueFrom:
+                secretKeyRef:
+                  name: pubsub-push-audience
+                  key: latest
+            - name: GCP_PROJECT_ID
+              value: REPLACE_GCP_PROJECT_ID
+          resources:
+            limits:
+              cpu: "2"
+              memory: 2Gi
