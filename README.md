@@ -8,73 +8,6 @@ A multi-agent QE framework for finance-sector systems, built on Claude Code. Ope
 
 ### Full System Overview
 
-```mermaid
-graph TB
-    subgraph SIGNALS["Signal Sources"]
-        GH["GitHub<br/>PRs · CI · Repos"]
-        JI["Jira<br/>Epics · Stories · Bugs"]
-        CF["Confluence<br/>BRD · ADRs · Arch"]
-        GCP["GCP<br/>Log Explorer · Monitoring"]
-        OT["OTEL<br/>Traces · Spans"]
-    end
-
-    subgraph QEaaS["qe-as-a-service · Strategic Layer"]
-        PA["Planning &<br/>Analysis Agent"]
-        CA["Coverage &<br/>Gap Agent"]
-        IA["Incident<br/>Analysis Agent"]
-    end
-
-    subgraph ARTIFACTS["Cross-cutting Artifacts"]
-        TS[test-strategy.md]
-        IM[infra-map.md]
-        GR[coverage-gap-report.md]
-    end
-
-    subgraph IDENTITY["identity-repo · Shift Left"]
-        IQE[".qe/ maps<br/>identity-scoped"]
-        ITC["test-creator-agent<br/>pytest specialist"]
-        ITH["test-healer-agent<br/>CI auto-heal"]
-        ICI[Existing GHA CI]
-    end
-
-    subgraph MICRO["microservices-repo · Shift Left"]
-        MQE[".qe/ maps<br/>transaction-scoped"]
-        MTC["test-creator-agent<br/>Go specialist"]
-        MTH["test-healer-agent<br/>CI auto-heal"]
-        MCI[Existing GHA CI]
-    end
-
-    subgraph SHIFTRIGHT["Shift Right · Staging"]
-        INT["Integration Tests<br/>Real systems"]
-        FR["ForgeRock · Daon<br/>Payment Gateways<br/>Regulatory APIs"]
-    end
-
-    GH & JI & CF --> PA
-    GCP & OT --> CA
-    GCP & OT & JI & GH --> IA
-
-    PA -->|writes| TS & IM
-    PA -->|"PR: scoped maps"| IQE & MQE
-    PA -->|"PR: agent templates on first setup"| ITC & ITH & MTC & MTH
-
-    CA -->|writes| GR
-    CA -->|"PR: map updates"| IQE & MQE
-    CA -->|test creation request| ITC & MTC
-
-    IA -->|confirmed RCA| JI
-    IA -->|regression request| ITC & MTC
-
-    IQE --> ITC
-    IQE --> ITH
-    MQE --> MTC
-    MQE --> MTH
-
-    ICI -->|failure| ITH
-    MCI -->|failure| MTH
-
-    IDENTITY & MICRO --> INT
-    INT --> FR
-```
 
 ---
 
@@ -255,7 +188,7 @@ qe-as-a-service/
 
 ---
 
-## Finance-Specific Constraints
+## Example Usecase Constraints
 
 Applied by every agent, baked into every agent prompt:
 
