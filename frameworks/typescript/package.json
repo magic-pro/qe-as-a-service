@@ -1,0 +1,23 @@
+{
+  "name": "qe-framework-typescript",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --project integration",
+    "lint": "eslint src tests"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "typescript": "^5.4.0",
+    "axios": "^1.7.0",
+    "decimal.js": "^10.4.3",
+    "@faker-js/faker": "^9.0.0",
+    "zod": "^3.23.0",
+    "eslint": "^9.0.0"
+  }
+}
