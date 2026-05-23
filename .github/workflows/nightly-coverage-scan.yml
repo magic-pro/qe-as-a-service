@@ -1,8 +1,6 @@
 name: QEaaS — Nightly Coverage & Gap Scan
-
-on:
-  schedule:
-    - cron: '0 3 * * *'     # 03:00 UTC nightly
+## To fix from local
+on:   # 03:00 UTC nightly
   workflow_dispatch:
     inputs:
       since_hours:
