@@ -119,6 +119,30 @@ trail links coverage gap → test creation run → resulting draft PR.
 ### 4. Infra Map Update
 If new infra component found, update `artifacts/infra-map.md` and notify human to re-run `/plan-analysis` for a full infrastructure re-assessment.
 
+## QE Eval Scorecard
+
+After producing the gap report, compute and **append** the following scorecard to `artifacts/coverage-gap-report.md`. Count exactly from what you found and reported.
+
+```markdown
+## QE Eval Scorecard — Coverage Agent
+
+| Metric | Value | Status |
+|---|---|---|
+| Critical gaps identified | <count> | — |
+| High priority gaps | <count> | — |
+| Medium priority gaps | <count> | — |
+| Test creation requests raised | <count> / <total critical+high gaps> | PASS if all critical gaps have a request, FAIL if any critical gap missing a request |
+| Finance-critical gaps addressed | <count with request> / <count of KYC/AML/monetary/audit/fraud gaps> | PASS if 100%, FAIL if any unaddressed |
+| New float/double fields in production logs | <count> | PASS if 0, FAIL if >0 |
+| Map updates raised as PRs | <PRs raised> / <map updates needed> | PASS if 100%, WARN if partial |
+| Workflow run URL recorded | Yes / No | PASS if Yes, WARN if No |
+
+**Rule**: Every Critical gap MUST have a test creation request — FAIL blocks human approval if violated.  
+**Overall: PASS / WARN / FAIL** — lowest status across all metrics above.
+```
+
+To verify independently: `eval/score-coverage-gap.sh artifacts/coverage-gap-report.md`
+
 ## Finance-Specific Gap Priorities
 
 Always flag as Critical regardless of frequency:

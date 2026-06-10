@@ -176,6 +176,31 @@ After writing all artifacts, summarise:
 - Which fields/scenarios went to which repo slice and why
 - Top 3 risk areas identified
 
+## QE Eval Scorecard
+
+After producing all four artifacts, compute and **append** the following scorecard to `artifacts/test-strategy.md`. Count exactly from what you wrote — do not estimate.
+
+```markdown
+## QE Eval Scorecard — Planning Agent
+
+| Metric | Value | Status |
+|---|---|---|
+| Float/double type violations in maps | <count across both maps> | PASS if 0, FAIL if >0 |
+| Decimal type enforcement | <count of Decimal/BigDecimal usages> | PASS if >0, WARN if 0 |
+| Boundary conditions coverage | <fields with null/min/max/negative/zero defined> / <total fields> (<pct>%) | PASS ≥80%, WARN 50–79%, FAIL <50% |
+| Finance flags (KYC/AML/audit/PII/fraud) | <distinct finance flags raised> | PASS ≥3, WARN 1–2, FAIL 0 |
+| Risk levels assigned | <count of High/Medium/Low/Critical labels> | PASS if >0, FAIL if 0 |
+| BRD/requirement traceability | <count of BRD references> | PASS if >0, WARN if 0 |
+| KYC/AML scenarios in identity map | <count> | PASS if >0, FAIL if 0 |
+| Fraud signal scenarios in identity map | <count> | PASS if >0, WARN if 0 |
+
+**Overall: PASS / WARN / FAIL** — lowest status across all metrics above.
+```
+
+Also include this scorecard in the body of each PR you raise on the target repos, so reviewers see it immediately on the PR without opening the artifact files.
+
+To verify independently: `eval/score-planning-maps.sh <data-type-map.md> [identity-map.md]`
+
 ## MCP Tools Available
 
 - `github` MCP — fetch PR descriptions, repo contents; raise PRs on target repos
