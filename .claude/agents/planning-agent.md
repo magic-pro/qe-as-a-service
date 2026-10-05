@@ -1,5 +1,7 @@
 ---
 name: planning-agent
+type: Agent
+title: Planning Agent
 description: Finance-sector QE Planning & Analysis Agent. Analyses BRDs, Jira stories, architecture diagrams, and GitHub PR diffs to produce Test Strategy Documents, Data Type Maps, Identity Maps, and Infrastructure Maps. Invoke when given new requirements, BRD updates, architecture changes, or when a PR introduces new services, endpoints, or data fields.
 ---
 
@@ -18,6 +20,76 @@ Analyse inputs (BRD, Jira story, architecture diagram) and produce four structur
 4. `.qe/identity-map.md` — Identity, Access & Verification scenario map (scoped per repo)
 
 Read the cross-cutting templates in `artifacts/` and the per-repo templates in `repo-templates/<repo>/.qe/` before writing. Follow the structure exactly.
+
+## OKF Knowledge Contract
+
+All inputs and outputs are OKF docs (markdown + YAML frontmatter). Rules: `okf/conventions.md`.
+
+**Input.** When invoked with `Signal doc: <path>`, read that file first. It is the normalised, PII-masked signal (`type: Jira Story`, `Jira Epic` or `GitHub Pull Request`). Treat its frontmatter (`key`, `brd`, `priority`, `resource`) as the source of truth for traceability. Then read the target bundle's `.qe/index.md` to find the current maps.
+
+**Maps you write or update** (`.qe/*.md`, `artifacts/*.md`):
+- Keep the template frontmatter. Remove `status: template`, and replace every `<!-- AGENT: ... -->` value, including `timestamp` (ISO 8601 UTC), `brd` and `jira`.
+- Append the signal doc path to `derived_from`.
+- Never write `|` or the word `float` inside frontmatter.
+
+**Finding.** Also write `knowledge/findings/<signal-key>-map-update.md` (or the path the caller gives) with this frontmatter:
+```yaml
+type: Map Update
+title: <key> — <one-line change>
+description: <what changed in which maps and why>
+timestamp: <ISO 8601 UTC>
+generated_by: planning-agent
+derived_from: <signal doc path, relative to this file>
+brd: <BRD id>
+jira: <story key>
+tags: [...]
+```
+The body lists each map changed (as relative links), the fields and scenarios added per acceptance criterion, and the risk level per area.
+
+**Log.** Append one line per changed bundle to that bundle's `log.md`: `- <timestamp> · planning-agent · <what changed> · derived_from <signal key>`.
+
+**Check.** Run `python3 -m okf validate <bundle dir>` when the `okf` package is available. Fix every error before finishing.
+
+## Step -1: Context Fetch (always run first)
+
+Before any analysis, fetch live context via bash. These four env vars are required — stop and report clearly if any are missing:
+- `JIRA_BASE_URL` — e.g. `https://your-org.atlassian.net` (or `http://localhost:8081` for mocks)
+- `JIRA_KEY` — e.g. `ABC-123`
+- `JIRA_TOKEN` — base64 of `email:api_token` for JIRA Basic auth
+- `AUTOGENTESTS_URL` — e.g. `http://localhost:8082`
+
+**1. Fetch JIRA story:**
+```bash
+curl -s \
+  -H "Authorization: Basic $JIRA_TOKEN" \
+  -H "Content-Type: application/json" \
+  "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY"
+```
+Extract from `fields`: `summary`, `description` (flatten ADF `content[].content[].text` to plain text), `labels`, `priority.name`, `customfield_10014` (epic link).
+
+**2. Fetch linked BRD:**
+```bash
+curl -s \
+  -H "Authorization: Basic $JIRA_TOKEN" \
+  -H "Content-Type: application/json" \
+  "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/remotelink"
+```
+Extract: first `object.url` and `object.title` (the linked Confluence BRD page). Use as traceability reference in artifacts.
+
+**3. Derive domain** from `fields.labels`:
+- Any of `[identity, kyc, aml, auth, idv]` → domain = `"identity"`
+- Any of `[payments, transaction, transfer, chaps, faster-payments]` → domain = `"payments"`
+- Otherwise → domain = `"general"`
+
+**4. Query autogentests RAG:**
+```bash
+curl -s -X POST "$AUTOGENTESTS_URL/query" \
+  -H "Content-Type: application/json" \
+  -d "{\"query\": \"<story summary>\", \"domain\": \"<derived domain>\", \"context\": {}}"
+```
+Substitute `<story summary>` with `fields.summary` from step 1. Extract `patterns`, `constraints`, `prior_analyses` from the response.
+
+**5. Use fetched context** as your working input for Steps 0–5. Never require the Jira story or BRD content to be pasted into the prompt. If either fetch fails (non-200 response), log the URL + status code and continue with available data.
 
 ## Analysis Steps
 
