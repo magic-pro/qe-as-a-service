@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1002,
+    "self": "http://localhost:8081/rest/api/3/issue/PAY-456/remotelink/1002",
+    "object": {
+      "url": "https://confluence.example.com/display/BRD/PAY-2026",
+      "title": "Domestic Payments BRD — CHAPS and Faster Payments 2026",
+      "summary": "Business Requirements Document for domestic payment processing including CHAPS, Faster Payments, velocity checks, and fraud detection.",
+      "icon": {
+        "url16x16": "https://confluence.example.com/favicon.ico",
+        "title": "Confluence"
+      }
+    }
+  }
+]

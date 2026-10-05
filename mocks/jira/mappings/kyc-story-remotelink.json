@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/rest/api/3/issue/ABC-123/remotelink"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "bodyFileName": "kyc-story-remotelink-body.json"
+  }
+}

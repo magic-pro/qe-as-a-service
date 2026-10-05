@@ -1,0 +1,41 @@
+{
+  "id": "10002",
+  "key": "PAY-456",
+  "self": "http://localhost:8081/rest/api/3/issue/10002",
+  "fields": {
+    "summary": "Domestic Payment Processing — CHAPS and Faster Payments",
+    "issuetype": { "name": "Story" },
+    "status": { "name": "To Do" },
+    "priority": { "name": "Critical" },
+    "labels": ["payments", "transaction", "chaps", "faster-payments", "regulatory"],
+    "customfield_10014": "PAY-400",
+    "description": {
+      "type": "doc",
+      "version": 1,
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "As a customer, I need to send domestic payments via CHAPS and Faster Payments so that funds arrive same-day or within 2 hours."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Acceptance Criteria: 1) Payments up to GBP 250,000 via CHAPS. 2) Faster Payments up to GBP 100,000. 3) Duplicate payment detection within 60-second window. 4) Velocity check: >3 payments to new payee in 24h triggers fraud flag. 5) All monetary amounts stored as Decimal (not float). 6) Payment reference validated against Faster Payments regex. 7) Audit trail entry for every payment state transition."
+            }
+          ]
+        }
+      ]
+    },
+    "assignee": { "displayName": "Payments Dev" },
+    "reporter": { "displayName": "Payments PO" },
+    "created": "2026-09-20T10:00:00.000+0000",
+    "updated": "2026-10-03T11:00:00.000+0000"
+  }
+}
