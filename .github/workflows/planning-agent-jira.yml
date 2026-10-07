@@ -21,8 +21,10 @@ jobs:
 
       - name: Set service URLs
         id: urls
+        env:
+          USE_MOCKS: ${{ github.event.inputs.use_mocks }}
         run: |
-          if [ "${{ github.event.inputs.use_mocks }}" = "true" ]; then
+          if [ "$USE_MOCKS" = "true" ]; then
             echo "jira_url=http://localhost:8081" >> $GITHUB_OUTPUT
             echo "autogentests_url=http://localhost:8082" >> $GITHUB_OUTPUT
             # Dummy token — WireMock does not check Authorization
@@ -39,7 +41,8 @@ jobs:
           docker compose up -d
           echo "Waiting for mock services to be healthy..."
           timeout 60 bash -c '
-            until curl -sf http://localhost:8081/__admin/health && curl -sf http://localhost:8082/health; do
+            until curl -sf http://localhost:8081/__admin/health && \
+                  python3 -c "import urllib.request; urllib.request.urlopen(\"http://localhost:8082/health\")" 2>/dev/null; do
               echo "  still waiting..."
               sleep 3
             done
@@ -50,7 +53,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           prompt: >
-            Analyse Jira story ${{ github.event.inputs.jira_key }} and produce all four QE artifacts.
+            Analyse the Jira story in env var JIRA_KEY and produce all four QE artifacts.
             Run Step -1 first to fetch the story and RAG context before any analysis.
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
         env:
@@ -68,6 +71,7 @@ jobs:
             artifacts/test-strategy.md
             artifacts/infra-map.md
           retention-days: 30
+          if-no-files-found: warn
 
       - name: Post summary to workflow
         if: always()

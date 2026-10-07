@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/rest/api/3/issue/ABC-123"
+    "urlPath": "/rest/api/3/issue/ABC-123"
   },
   "response": {
     "status": 200,

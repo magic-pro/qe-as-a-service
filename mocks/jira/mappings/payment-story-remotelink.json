@@ -1,7 +1,7 @@
 {
   "request": {
     "method": "GET",
-    "url": "/rest/api/3/issue/PAY-456/remotelink"
+    "urlPath": "/rest/api/3/issue/PAY-456/remotelink"
   },
   "response": {
     "status": 200,

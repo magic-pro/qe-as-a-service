@@ -1,10 +1,12 @@
 import json
 import pathlib
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI(title="autogentests-mock")
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
+
+KNOWN_DOMAINS = {"general", "identity", "payments"}
 
 
 class QueryRequest(BaseModel):
@@ -15,10 +17,9 @@ class QueryRequest(BaseModel):
 
 @app.post("/query")
 async def query(req: QueryRequest):
-    fixture = FIXTURES / f"{req.domain}-patterns.json"
-    if not fixture.exists():
-        fixture = FIXTURES / "general-patterns.json"
-    return json.loads(fixture.read_text())
+    if req.domain not in KNOWN_DOMAINS:
+        raise HTTPException(status_code=422, detail=f"Unknown domain '{req.domain}'. Valid: {sorted(KNOWN_DOMAINS)}")
+    return json.loads((FIXTURES / f"{req.domain}-patterns.json").read_text())
 
 
 @app.get("/health")

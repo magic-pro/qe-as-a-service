@@ -62,7 +62,6 @@ Before any analysis, fetch live context via bash. These four env vars are requir
 ```bash
 curl -s \
   -H "Authorization: Basic $JIRA_TOKEN" \
-  -H "Content-Type: application/json" \
   "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY"
 ```
 Extract from `fields`: `summary`, `description` (flatten ADF `content[].content[].text` to plain text), `labels`, `priority.name`, `customfield_10014` (epic link).
@@ -71,23 +70,26 @@ Extract from `fields`: `summary`, `description` (flatten ADF `content[].content[
 ```bash
 curl -s \
   -H "Authorization: Basic $JIRA_TOKEN" \
-  -H "Content-Type: application/json" \
   "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY/remotelink"
 ```
 Extract: first `object.url` and `object.title` (the linked Confluence BRD page). Use as traceability reference in artifacts.
 
-**3. Derive domain** from `fields.labels`:
+**3. Derive domain** from `fields.labels` (identity takes priority over payments when both match):
 - Any of `[identity, kyc, aml, auth, idv]` → domain = `"identity"`
-- Any of `[payments, transaction, transfer, chaps, faster-payments]` → domain = `"payments"`
+- Else any of `[payments, transaction, transfer, chaps, faster-payments]` → domain = `"payments"`
 - Otherwise → domain = `"general"`
 
 **4. Query autogentests RAG:**
+
+Use `jq` to build the JSON payload safely — never interpolate raw API response fields directly into shell strings:
 ```bash
+JIRA_SUMMARY=$(echo "$STORY_JSON" | jq -r '.fields.summary')
+PAYLOAD=$(jq -n --arg q "$JIRA_SUMMARY" --arg d "$DOMAIN" '{"query":$q,"domain":$d,"context":{}}')
 curl -s -X POST "$AUTOGENTESTS_URL/query" \
   -H "Content-Type: application/json" \
-  -d "{\"query\": \"<story summary>\", \"domain\": \"<derived domain>\", \"context\": {}}"
+  -d "$PAYLOAD"
 ```
-Substitute `<story summary>` with `fields.summary` from step 1. Extract `patterns`, `constraints`, `prior_analyses` from the response.
+Extract `patterns`, `constraints`, `prior_analyses` from the response.
 
 **5. Use fetched context** as your working input for Steps 0–5. Never require the Jira story or BRD content to be pasted into the prompt. If either fetch fails (non-200 response), log the URL + status code and continue with available data.
 
