@@ -60,9 +60,9 @@ Before any analysis, fetch live context via bash. These four env vars are requir
 
 **1. Fetch JIRA story:**
 ```bash
-curl -s \
+STORY_JSON=$(curl -s \
   -H "Authorization: Basic $JIRA_TOKEN" \
-  "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY"
+  "$JIRA_BASE_URL/rest/api/3/issue/$JIRA_KEY")
 ```
 Extract from `fields`: `summary`, `description` (flatten ADF `content[].content[].text` to plain text), `labels`, `priority.name`, `customfield_10014` (epic link).
 

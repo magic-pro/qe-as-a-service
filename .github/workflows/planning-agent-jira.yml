@@ -75,8 +75,10 @@ jobs:
 
       - name: Post summary to workflow
         if: always()
+        env:
+          JIRA_KEY: ${{ github.event.inputs.jira_key }}
         run: |
-          echo "## QEaaS Planning Agent — ${{ github.event.inputs.jira_key }}" >> $GITHUB_STEP_SUMMARY
+          echo "## QEaaS Planning Agent — $JIRA_KEY" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f artifacts/test-strategy.md ]; then
             echo "### Test Strategy (first 80 lines)" >> $GITHUB_STEP_SUMMARY
