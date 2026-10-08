@@ -1,0 +1,56 @@
+{
+  "_comment": "SYNTHETIC Cloud Monitoring alert + Log Explorer entries. All identifiers are fake; PII fields are present to prove masking.",
+  "severity": "CRITICAL",
+  "log_filter": "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"auth-gateway\" AND jsonPayload.event=\"totp_replay_accepted\"",
+  "incident": {
+    "incident_id": "0.nq1synthetic7x",
+    "policy_name": "auth-gateway TOTP anomaly",
+    "condition": { "displayName": "TOTP replay accepted > 0 in 5m" },
+    "state": "open",
+    "started_at": "2026-09-27T03:10:00Z",
+    "url": "https://console.cloud.google.com/monitoring/alerting/incidents/0.nq1synthetic7x?project=synthetic-qe",
+    "summary": "Log-based metric totp_replay_accepted fired 14 times in 5 minutes on auth-gateway revision auth-gateway-00042-xyz.",
+    "resource": { "type": "cloud_run_revision", "labels": { "service_name": "auth-gateway" } }
+  },
+  "entries": [
+    {
+      "logName": "projects/synthetic-qe/logs/run.googleapis.com%2Fstdout",
+      "timestamp": "2026-09-27T03:10:04Z",
+      "severity": "ERROR",
+      "resource": { "type": "cloud_run_revision", "labels": { "service_name": "auth-gateway", "revision_name": "auth-gateway-00042-xyz" } },
+      "trace": "projects/synthetic-qe/traces/a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "jsonPayload": { "event": "totp_replay_accepted", "message": "TOTP code accepted twice within 30s window", "user_id": "usr_syn_0001", "email": "cust0001@example.com", "ip_address": "203.0.113.24", "totp_window": "30s", "mfa_provider": "forgerock", "revision": "auth-gateway-00042-xyz", "config_change": "totp.replay_cache.enabled=false" }
+    },
+    {
+      "logName": "projects/synthetic-qe/logs/run.googleapis.com%2Fstdout",
+      "timestamp": "2026-09-27T03:11:19Z",
+      "severity": "ERROR",
+      "resource": { "type": "cloud_run_revision", "labels": { "service_name": "auth-gateway", "revision_name": "auth-gateway-00042-xyz" } },
+      "trace": "projects/synthetic-qe/traces/0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "jsonPayload": { "event": "totp_replay_accepted", "message": "TOTP code accepted twice within 30s window", "user_id": "usr_syn_0002", "email": "cust0002@example.com", "ip_address": "198.51.100.7", "totp_window": "30s", "mfa_provider": "forgerock", "revision": "auth-gateway-00042-xyz", "config_change": "totp.replay_cache.enabled=false" }
+    },
+    {
+      "logName": "projects/synthetic-qe/logs/run.googleapis.com%2Fstdout",
+      "timestamp": "2026-09-27T03:13:47Z",
+      "severity": "ERROR",
+      "resource": { "type": "cloud_run_revision", "labels": { "service_name": "auth-gateway", "revision_name": "auth-gateway-00042-xyz" } },
+      "trace": "projects/synthetic-qe/traces/9a8b7c6d5e4f30211203f4e5d6c7b8a9",
+      "jsonPayload": { "event": "totp_replay_accepted", "message": "TOTP code accepted twice within 30s window", "user_id": "usr_syn_0003", "email": "cust0003@example.com", "ip_address": "192.0.2.55", "totp_window": "30s", "mfa_provider": "forgerock", "revision": "auth-gateway-00042-xyz", "config_change": "totp.replay_cache.enabled=false" }
+    },
+    {
+      "logName": "projects/synthetic-qe/logs/run.googleapis.com%2Fstdout",
+      "timestamp": "2026-09-27T03:09:58Z",
+      "severity": "INFO",
+      "resource": { "type": "cloud_run_revision", "labels": { "service_name": "auth-gateway", "revision_name": "auth-gateway-00042-xyz" } },
+      "jsonPayload": { "event": "revision_deployed", "message": "Deployed auth-gateway-00042-xyz with config totp.replay_cache.enabled=false (perf tuning PR #311)", "revision": "auth-gateway-00042-xyz" }
+    },
+    {
+      "logName": "projects/synthetic-qe/logs/run.googleapis.com%2Fstdout",
+      "timestamp": "2026-09-27T03:12:30Z",
+      "severity": "WARNING",
+      "resource": { "type": "cloud_run_revision", "labels": { "service_name": "payments-service", "revision_name": "payments-service-00118-abc" } },
+      "trace": "projects/synthetic-qe/traces/0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "jsonPayload": { "event": "payment_authorised_after_mfa", "message": "Payment authorised on session with replayed TOTP", "user_id": "usr_syn_0002", "amount": "4999.99", "currency": "GBP", "account_number": "12345678" }
+    }
+  ]
+}

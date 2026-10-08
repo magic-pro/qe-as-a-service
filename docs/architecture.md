@@ -1,3 +1,11 @@
+---
+type: Architecture
+title: QEaaS Architecture
+description: How signals flow through the QEaaS strategic agents into shift-left target repos, and the v1–v3 roadmap.
+timestamp: 2026-09-27T00:00:00Z
+tags: [architecture, okf]
+---
+
 # QEaaS Architecture
 
 ## How It Works
@@ -5,6 +13,7 @@
 ```mermaid
 flowchart TD
     Signals["GitHub · Jira · Confluence · GCP · OTEL"]
+    OKF["OKF signal docs<br/>knowledge/signals/"]
 
     subgraph QEaaS["qe-as-a-service"]
         PA[Planning Agent] --> CA[Coverage Agent]
@@ -18,11 +27,15 @@ flowchart TD
 
     Staging["Staging · Real Systems"]
 
-    Signals --> QEaaS
-    QEaaS -->|".qe/ maps via PR"| Repos
+    Signals -->|"normalize + PII mask"| OKF
+    OKF --> QEaaS
+    QEaaS -->|"findings (derived_from → signal)"| OKF
+    QEaaS -->|".qe/ OKF maps via PR"| Repos
     Repos --> Staging
     Staging -->|"gaps"| CA
 ```
+
+Every arrow carries an OKF doc: markdown with typed frontmatter. Conventions are in [../okf/conventions.md](../okf/conventions.md), and the bundle entry point is [../knowledge/index.md](../knowledge/index.md).
 
 ---
 

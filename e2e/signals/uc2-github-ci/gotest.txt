@@ -1,0 +1,29 @@
+=== RUN   TestAmountRounding_HalfUp
+=== RUN   TestAmountRounding_HalfUp/GBP_0.005_→_0.01_(half-up)
+    amount_rounding_test.go:52:
+        	Error Trace:	/home/runner/work/payments-service/payments/amount_rounding_test.go:52
+        	Error:      	Not equal:
+        	            	expected: "0.01"
+        	            	actual  : "0.00"
+        	Test:       	TestAmountRounding_HalfUp/GBP_0.005_→_0.01_(half-up)
+--- FAIL: TestAmountRounding_HalfUp/GBP_0.005_→_0.01_(half-up) (0.00s)
+=== RUN   TestAmountRounding_HalfUp/GBP_0.015_→_0.02_(half-up)
+--- PASS: TestAmountRounding_HalfUp/GBP_0.015_→_0.02_(half-up) (0.00s)
+=== RUN   TestAmountRounding_HalfUp/USD_0.005_→_0.01_(half-up)
+    amount_rounding_test.go:52:
+        	Error Trace:	/home/runner/work/payments-service/payments/amount_rounding_test.go:52
+        	Error:      	Not equal:
+        	            	expected: "0.01"
+        	            	actual  : "0.00"
+--- FAIL: TestAmountRounding_HalfUp/USD_0.005_→_0.01_(half-up) (0.00s)
+=== RUN   TestAmountRounding_HalfUp/JPY_0.5_→_1_(half-up)
+    amount_rounding_test.go:52:
+        	Error:      	Not equal:
+        	            	expected: "1"
+        	            	actual  : "0"
+--- FAIL: TestAmountRounding_HalfUp/JPY_0.5_→_1_(half-up) (0.00s)
+--- FAIL: TestAmountRounding_HalfUp (0.00s)
+FAIL
+FAIL	payments-service/payments	0.412s
+ok  	payments-service/helpers	0.201s
+FAIL

@@ -1,0 +1,41 @@
+{
+  "_comment": "SYNTHETIC Jira Cloud webhook (jira:issue_updated). No real data. Reporter email is intentionally present to prove PII masking.",
+  "timestamp": 1790500500000,
+  "webhookEvent": "jira:issue_updated",
+  "issue_event_type_name": "issue_generic",
+  "user": { "accountId": "5f00000000000000synthetic", "displayName": "Synthetic PO" },
+  "issue": {
+    "id": "10214",
+    "self": "https://synthetic-bank.atlassian.net/rest/api/3/issue/10214",
+    "key": "PAY-214",
+    "fields": {
+      "issuetype": { "name": "Story" },
+      "summary": "Support KWD and OMR (3dp) for GCC cross-border payments",
+      "status": { "name": "In Development" },
+      "priority": { "name": "High" },
+      "labels": ["payments", "gcc-corridor"],
+      "components": [{ "name": "payments-service" }],
+      "customfield_brd": "BRD-PAY-001",
+      "created": "2026-09-20T09:00:00.000+0000",
+      "updated": "2026-09-26T14:05:00.000+0000",
+      "issuelinks": [
+        { "type": { "name": "Relates", "outward": "relates to", "inward": "relates to" }, "outwardIssue": { "key": "STORY-789" } }
+      ],
+      "description": {
+        "type": "doc",
+        "version": 1,
+        "content": [
+          { "type": "paragraph", "content": [ { "type": "text", "text": "As a treasury operator I need to send cross-border payments in Kuwaiti Dinar (KWD) and Omani Rial (OMR) so that the GCC corridor can go live. Both currencies use 3 decimal places (fils / baisa). Raised by po.synthetic@example.com." } ] },
+          { "type": "heading", "attrs": { "level": 2 }, "content": [ { "type": "text", "text": "Acceptance Criteria" } ] },
+          { "type": "orderedList", "content": [
+            { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "AC1: KWD and OMR are accepted currencies with exactly 3 decimal places (1.234 KWD valid)." } ] } ] },
+            { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "AC2: An amount with 4 decimal places in KWD or OMR (e.g. 1.2345) is rejected with PRECISION_EXCEEDED." } ] } ] },
+            { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "AC3: Minimum amount is 0.001 KWD / 0.001 OMR; zero and negative amounts are rejected with INVALID_AMOUNT." } ] } ] },
+            { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "AC4: GCC payments are always cross-border; a missing IBAN is rejected with MISSING_IBAN (test IBAN KW81CBKU0000000000001234560101)." } ] } ] },
+            { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "AC5: Amounts must be decimal types end to end; no binary floating point anywhere in the flow." } ] } ] }
+          ] }
+        ]
+      }
+    }
+  }
+}

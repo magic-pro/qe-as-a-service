@@ -1,0 +1,14 @@
+# UC1 — Jira story PAY-214 (new KWD/OMR 3dp acceptance criteria) → planning-agent → .qe map update
+signal: knowledge/signals/jira/PAY-214.md
+outputs:
+  - path: knowledge/findings/PAY-214-map-update.md
+    type: Map Update
+    derived_from: knowledge/signals/jira/PAY-214.md
+    keywords: [PAY-214, KWD, OMR, PRECISION_EXCEEDED, MISSING_IBAN]
+  - path: .qe/data-type-map.md
+    type: Data Type Map
+    derived_from: knowledge/signals/jira/PAY-214.md
+    keywords: [KWD, OMR, "0.001", "1.2345"]
+  - path: .qe/log.md
+    type: Log
+    keywords: [planning-agent, PAY-214]

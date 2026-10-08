@@ -1,3 +1,12 @@
+---
+type: Design Spec
+title: Test-Creator Agent — Local End-to-End Proof Harness
+description: Design for proving the test-creator-agent runs end to end against a compilable Go payments fixture.
+timestamp: 2026-05-30T00:00:00Z
+status: approved
+tags: [e2e, test-creator-agent, design]
+---
+
 # Test-Creator Agent — Local End-to-End Proof Harness
 
 **Date:** 2026-05-30

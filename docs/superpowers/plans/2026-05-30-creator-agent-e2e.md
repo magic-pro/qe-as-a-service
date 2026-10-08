@@ -1,3 +1,12 @@
+---
+type: Implementation Plan
+title: Test-Creator Agent Local E2E Proof Harness — Implementation Plan
+description: Task-by-task plan implementing the test-creator E2E harness (fixture, runner, conformance checker).
+timestamp: 2026-05-30T00:00:00Z
+derived_from: ../specs/2026-05-30-creator-agent-e2e-design.md
+tags: [e2e, test-creator-agent, plan]
+---
+
 # Test-Creator Agent Local E2E Proof Harness — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

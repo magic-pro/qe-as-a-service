@@ -1,0 +1,13 @@
+# UC3 — GCP Log Explorer: TOTP replay accepted on auth-gateway → incident-agent → RCA + regression request
+signal: knowledge/signals/gcp/0-nq1synthetic7x.md
+outputs:
+  - path: knowledge/findings/0-nq1synthetic7x-incident-rca.md
+    type: Incident RCA
+    derived_from: knowledge/signals/gcp/0-nq1synthetic7x.md
+    # P1 = incident-agent policy for an authentication-control failure on a payment path.
+    # (Was "fraud" — too literal; the first live run correctly called it an SCA bypass.)
+    keywords: [auth-gateway, replay, replay_cache, auth-gateway-00042-xyz, P1]
+  - path: knowledge/findings/0-nq1synthetic7x-regression-request.md
+    type: Regression Test Request
+    derived_from: knowledge/signals/gcp/0-nq1synthetic7x.md
+    keywords: [TOTP, replay, "401"]

@@ -1,5 +1,7 @@
 ---
 name: incident-rca
+type: Command
+title: /incident-rca
 description: Invoke the Incident Analysis Agent. Provide an alert URL, GCP incident ID, Jira ticket, or paste log output. The agent performs root cause analysis, presents findings for human confirmation, then generates reproduction steps, a regression test request, and an incident ticket.
 ---
 

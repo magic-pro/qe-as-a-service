@@ -10,10 +10,25 @@ if [ $# -lt 1 ] || [ ! -f "$1" ]; then
     exit 1
 fi
 
-DATA_MAP="$1"
-IDENTITY_MAP="${2:-}"
+DATA_MAP_DOC="$1"
+IDENTITY_MAP_DOC="${2:-}"
 fail=0
 warn=0
+
+# Keyword metrics count the markdown body only — OKF frontmatter (tags, description,
+# brd) must not inflate them. The OKF conformance check (8) uses the original files.
+strip_frontmatter() {
+    awk 'NR==1 && $0=="---" {fm=1; next} fm && $0=="---" {fm=0; next} !fm' "$1"
+}
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+DATA_MAP="$TMP_DIR/data-type-map.md"
+strip_frontmatter "$DATA_MAP_DOC" > "$DATA_MAP"
+IDENTITY_MAP=""
+if [ -n "$IDENTITY_MAP_DOC" ] && [ -f "$IDENTITY_MAP_DOC" ]; then
+    IDENTITY_MAP="$TMP_DIR/identity-map.md"
+    strip_frontmatter "$IDENTITY_MAP_DOC" > "$IDENTITY_MAP"
+fi
 
 row() { printf '| %-46s | %-30s | %s |\n' "$1" "$2" "$3"; }
 
@@ -104,6 +119,22 @@ if [ -n "$IDENTITY_MAP" ] && [ -f "$IDENTITY_MAP" ]; then
     fi
     row "Scenario sections in identity map" "$scenario_count" "$([ "$scenario_count" -ge 3 ] && echo PASS || echo WARN)"
 fi
+
+# 8. OKF conformance — typed frontmatter, required fields, links, no unfilled placeholders
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+for map in "$DATA_MAP_DOC" "$IDENTITY_MAP_DOC"; do
+    [ -n "$map" ] && [ -f "$map" ] || continue
+    okf_out=$(PYTHONPATH="$REPO_ROOT" python3 -m okf validate "$map" 2>&1)
+    okf_rc=$?
+    okf_errors=$(printf '%s\n' "$okf_out" | grep -c '^ERROR' || true)
+    if [ "$okf_rc" -eq 0 ]; then
+        row "OKF conformance ($(basename "$map"))" "0 errors" "PASS"
+    elif [ "$okf_errors" -gt 0 ]; then
+        row "OKF conformance ($(basename "$map"))" "$okf_errors errors" "FAIL"; fail=1
+    else
+        row "OKF conformance ($(basename "$map"))" "validator unavailable" "WARN"; warn=1
+    fi
+done
 
 echo ""
 if [ "$fail" -gt 0 ]; then

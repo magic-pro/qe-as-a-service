@@ -1,5 +1,7 @@
 ---
 name: test-healer-agent
+type: Agent
+title: Test Healer Agent
 description: Domain based repo Test Healer Agent. Triggered by CI failures — both test failures and static analysis findings (SonarQube, SpotBugs, Checkstyle, PMD). Analyses output, classifies findings, auto-fixes safe issues, raises PRs for complex fixes, escalates security and finance-critical findings to humans.
 ---
 
@@ -44,7 +46,7 @@ If not provided, ask the user to paste the failure output before proceeding.
 | Regression | App code changed — test correctly caught it |
 | Test bug | Wrong assertion or expectation |
 
-3. Check `.qe/data-type-map.md` and `.qe/identity-map.md` — confirm expected behaviour unchanged
+3. Check `.qe/data-type-map.md` and `.qe/Domain-Map/identity-map.md` — confirm expected behaviour unchanged
 
 ### Fix Rules
 

@@ -19,14 +19,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Claude Code CLI
-        run: npm install -g @anthropic-ai/claude-code
-
       - name: Invoke Coverage & Gap Analysis Agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -39,10 +31,8 @@ jobs:
           echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > /tmp/gcp-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-sa.json
 
-          claude -p \
-            "Use the coverage-agent subagent for this task.
-
-             Run nightly coverage scan.
+          claude --agent coverage-agent \
+            "Run nightly coverage scan.
              Scan window: last $SINCE_HOURS hours.
              Target repos: $TARGET_REPO.
 
@@ -51,7 +41,7 @@ jobs:
              2. Query OTEL for new trace spans
              3. Compare against existing test coverage in target repos
              4. Write gap report to artifacts/coverage-gap-report.md
-             5. Raise PRs on target repos for any .qe/ map updates needed
+             5. Raise PRs on target repos for any .qe/ map updates needed ## Stretched
              6. Output structured test creation requests
 
              Finance priorities: flag any uncovered monetary, KYC, AML,

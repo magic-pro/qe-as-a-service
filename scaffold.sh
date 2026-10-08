@@ -88,7 +88,8 @@ copy_agentic() {
 
   mkdir -p "$TARGET/.claude/agents" "$TARGET/.qe" "$TARGET/.github/workflows"
   cp "$SCRIPT_DIR/repo-templates/$REPO_TYPE/.claude/agents/"* "$TARGET/.claude/agents/" 2>/dev/null || true
-  cp "$SCRIPT_DIR/repo-templates/$REPO_TYPE/.qe/"* "$TARGET/.qe/" 2>/dev/null || true
+  # -R: the .qe OKF bundle has sub-folders (e.g. Domain-Map/) plus index.md and log.md.
+  cp -R "$SCRIPT_DIR/repo-templates/$REPO_TYPE/.qe/." "$TARGET/.qe/" 2>/dev/null || true
   cp "$SCRIPT_DIR/repo-templates/$REPO_TYPE/.github/workflows/"* "$TARGET/.github/workflows/" 2>/dev/null || true
 
   echo "  ✓ Agent templates → $TARGET/.claude/agents/"

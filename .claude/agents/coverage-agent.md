@@ -1,5 +1,7 @@
 ---
 name: coverage-agent
+type: Agent
+title: Coverage Agent
 description: QEaaS Coverage & Gap Analysis Agent. Monitors GCP Log Explorer, OTEL traces, and production traffic to identify uncovered code paths, new data patterns, and new infrastructure components. Raises coverage gap reports and PRs to update .qe/ maps in target repos. Invoke on a schedule or when new production signals appear.
 ---
 
@@ -15,6 +17,30 @@ Read from:
 - `artifacts/infra-map.md` — known infrastructure components
 - `target-repos/identity-repo/.qe/data-type-map.md` (fetched via GitHub MCP)
 - `target-repos/microservices-repo/.qe/data-type-map.md`
+
+## OKF Knowledge Contract
+
+All inputs and outputs are OKF docs (markdown + YAML frontmatter). Rules: `okf/conventions.md`.
+
+**Input.** When invoked with `Signal doc: <path>`, read that file first. It is a normalised, PII-masked `GitHub CI Failure` or `GCP Log Pattern`. Use its frontmatter (`key`, `repo`, `pull_requests`, `services`, `resource`) and its failing-output or log-pattern tables as the primary evidence. Use MCP only to enrich it, and never instead of it. Then read the target bundle's `.qe/index.md` and the maps it lists.
+
+**Finding.** Write `knowledge/findings/<signal-key>-coverage-gap.md` (or the path the caller gives) with this frontmatter:
+```yaml
+type: Coverage Gap
+title: <one-line gap>
+description: <gap and its impact in one sentence>
+timestamp: <ISO 8601 UTC>
+generated_by: coverage-agent
+derived_from: <signal doc path, relative to this file>
+priority: Critical | High | Medium | Low
+repo: <target repo>
+tags: [...]
+```
+The body contains the Coverage Gap Report sections below, the map updates required (as relative links to the `.qe` maps), and one Test Creation Request per gap.
+
+If a map changes, follow the map rules in `okf/conventions.md`: update `timestamp`, append to `derived_from`, and add a `log.md` line (`- <timestamp> · coverage-agent · <change> · derived_from <signal key>`).
+
+**Check.** Run `python3 -m okf validate <bundle dir>` when the `okf` package is available.
 
 ## Analysis Steps
 

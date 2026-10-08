@@ -1,0 +1,9 @@
+# Paths excluded from `python3 -m okf validate .`
+# Entry-point docs rendered by GitHub / read by Claude Code as instructions.
+README.md
+CLAUDE.md
+# Scratch notes and diagrams, not knowledge.
+.github/
+# Generated run output (gitignored).
+e2e/runs/
+.pytest_cache/

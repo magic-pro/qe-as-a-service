@@ -2,7 +2,9 @@
 QEaaS Webhook Receiver (v3)
 
 Deployed on Cloud Run. Receives webhooks from GitHub, Jira, Confluence, and GCP
-Cloud Monitoring. Routes each event to the appropriate QEaaS agent via Claude API.
+Cloud Monitoring. Each GitHub / Jira / GCP event is first normalised into an OKF
+signal doc (okf/normalize.py → knowledge/signals/<source>/), then routed to the
+appropriate QEaaS agent with the doc path as its input.
 
 Deploy: see deploy/cloud-run/
 """
@@ -14,11 +16,14 @@ import json
 import logging
 import os
 import subprocess
-from typing import Any
+from pathlib import Path
+from typing import Any, Optional
 
 from flask import Flask, Response, abort, jsonify, request
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+
+from okf.normalize import normalize
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +37,9 @@ ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 # The full Cloud Run URL configured as the audience on the Pub/Sub push subscription,
 # e.g. https://qe-as-a-service-webhook-xyz.a.run.app/webhooks/gcp-monitoring
 PUBSUB_PUSH_AUDIENCE = os.environ["PUBSUB_PUSH_AUDIENCE"]
+# Where OKF signal docs are written; agents run with the same working dir.
+SIGNALS_DIR = Path(os.environ.get("OKF_SIGNALS_DIR", "knowledge/signals"))
+JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "")
 
 _GOOGLE_REQUEST = google_requests.Request()
 _GOOGLE_ISSUERS = ("accounts.google.com", "https://accounts.google.com")
@@ -102,6 +110,25 @@ def invoke_agent(agent: str, prompt: str) -> None:
     logger.info("Invoked agent: %s", agent)
 
 
+def record_signal(source: str, payload: dict[str, Any], **kwargs: Any) -> Optional[Path]:
+    """Normalise a raw event into a PII-masked OKF signal doc and write it.
+
+    Never blocks routing: on failure the agent still runs with the task prompt alone.
+    """
+    try:
+        path = normalize(source, payload, **kwargs).write(SIGNALS_DIR)
+    except Exception:  # noqa: BLE001 — a malformed payload must not drop the webhook
+        logger.exception("OKF normalisation failed for %s event", source)
+        return None
+    logger.info("Recorded OKF signal: %s", path)
+    return path
+
+
+def with_signal(doc: Optional[Path], task: str) -> str:
+    """Agent prompt: the signal doc is the input contract; the task says what to do."""
+    return f"Signal doc: {doc}\n\n{task}" if doc else task
+
+
 @app.route("/webhooks/github", methods=["POST"])
 def github_webhook() -> Response:
     signature = request.headers.get("X-Hub-Signature-256", "")
@@ -115,24 +142,30 @@ def github_webhook() -> Response:
         pr = payload["pull_request"]
         # New PR — check if it contains new service, new dependency bump
         if _is_new_service_pr(pr) or _is_dependency_bump(pr):
+            doc = record_signal("github", payload, event=event)
             invoke_agent(
                 "planning-agent",
-                f"New PR detected: {pr['html_url']}\n"
-                f"Title: {pr['title']}\n"
-                f"Check if this introduces a new service or dependency bump. "
-                f"If so, re-assess infrastructure complexity map and flag any "
-                f"test strategy gaps.",
+                with_signal(
+                    doc,
+                    f"New PR detected: {pr['html_url']}. "
+                    f"Check if this introduces a new service or dependency bump. "
+                    f"If so, re-assess infrastructure complexity map and flag any "
+                    f"test strategy gaps.",
+                ),
             )
 
     elif event == "workflow_run" and payload.get("action") == "completed":
         run = payload["workflow_run"]
         if run["conclusion"] == "failure":
+            doc = record_signal("github", payload, event=event)
             invoke_agent(
                 "coverage-agent",
-                f"CI failure detected. Workflow: {run['name']}. "
-                f"URL: {run['html_url']}. "
-                f"Scan for any new code paths that may have been introduced "
-                f"and identify coverage gaps.",
+                with_signal(
+                    doc,
+                    f"CI failure detected: {run['html_url']}. "
+                    f"Scan for any new code paths that may have been introduced "
+                    f"and identify coverage gaps.",
+                ),
             )
 
     elif event == "push" and _is_new_service_push(payload):
@@ -158,29 +191,39 @@ def jira_webhook() -> Response:
         issue = payload.get("issue", {})
         issue_type = issue.get("fields", {}).get("issuetype", {}).get("name", "")
         status = issue.get("fields", {}).get("status", {}).get("name", "")
+        # Every issue event is recorded, whether or not it triggers an agent.
+        doc = record_signal("jira", payload, base_url=JIRA_BASE_URL)
 
         if issue_type in ("Epic", "Story") and "acceptance" in str(
             issue.get("fields", {}).get("description", "")
         ).lower():
             invoke_agent(
                 "planning-agent",
-                f"Jira story updated with acceptance criteria: {issue['key']}. "
-                f"Re-assess test strategy and update maps if needed.",
+                with_signal(
+                    doc,
+                    f"Jira story updated with acceptance criteria: {issue['key']}. "
+                    f"Re-assess test strategy and update maps if needed.",
+                ),
             )
 
         elif status == "In Development" and issue_type == "Story":
             invoke_agent(
                 "planning-agent",
-                f"Jira story moved to In Development: {issue['key']}. "
-                f"Ensure test strategy and .qe/ maps are up to date for this story.",
+                with_signal(
+                    doc,
+                    f"Jira story moved to In Development: {issue['key']}. "
+                    f"Ensure test strategy and .qe/ maps are up to date for this story.",
+                ),
             )
 
         elif issue_type == "Bug" and issue.get("fields", {}).get("priority", {}).get("name") in ("Critical", "High"):
             invoke_agent(
                 "incident-agent",
-                f"High-priority bug raised in Jira: {issue['key']}. "
-                f"Summary: {issue['fields'].get('summary', '')}. "
-                f"Analyse available logs and traces for this issue and prepare RCA.",
+                with_signal(
+                    doc,
+                    f"High-priority bug raised in Jira: {issue['key']}. "
+                    f"Analyse available logs and traces for this issue and prepare RCA.",
+                ),
             )
 
     return jsonify({"status": "accepted"}), 202
@@ -230,18 +273,17 @@ def gcp_monitoring_webhook() -> Response:
 
     incident = data.get("incident", {})
     severity = data.get("severity", "INFO")
-    condition = incident.get("condition", {}).get("displayName", "")
 
     if severity in ("CRITICAL", "ERROR") or incident.get("state") == "open":
+        doc = record_signal("gcp", data)
         invoke_agent(
             "incident-agent",
-            f"GCP Cloud Monitoring alert fired.\n"
-            f"Severity: {severity}\n"
-            f"Condition: {condition}\n"
-            f"Incident URL: {incident.get('url', 'N/A')}\n"
-            f"Resource: {incident.get('resource', {})}\n\n"
-            f"Perform root cause analysis. Present findings for human confirmation "
-            f"before generating incident ticket or regression test request.",
+            with_signal(
+                doc,
+                f"GCP Cloud Monitoring alert fired: {incident.get('url', 'N/A')}. "
+                f"Perform root cause analysis. Present findings for human confirmation "
+                f"before generating incident ticket or regression test request.",
+            ),
         )
 
     return jsonify({"status": "accepted"}), 202

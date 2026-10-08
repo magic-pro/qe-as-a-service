@@ -1,8 +1,4 @@
 {
-  "enabledPlugins": {
-    "frontend-design@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true
-  },
   "permissions": {
     "allow": [
       "Read(artifacts/**)",
@@ -20,5 +16,9 @@
       "Bash(find . -type f -name '*.go')",
       "Bash(find . -type f -name '*.py')"
     ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
   }
 }

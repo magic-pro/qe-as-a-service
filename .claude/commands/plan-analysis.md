@@ -1,5 +1,7 @@
 ---
 name: plan-analysis
+type: Command
+title: /plan-analysis
 description: Invoke the Planning & Analysis Agent. Provide BRD text, Jira story ID/URL, and/or architecture diagram. The agent analyses inputs, writes cross-cutting artifacts to artifacts/, slices maps by repo, and raises PRs on target repos to place .qe/ maps and .claude/agents/ templates in place.
 ---
 

@@ -1,5 +1,7 @@
 ---
 name: coverage-gap
+type: Command
+title: /coverage-gap
 description: Invoke the Coverage & Gap Analysis Agent. Scans GCP logs, OTEL traces, and production traffic against existing test coverage. Outputs a gap report, raises PRs to update .qe/ maps, and generates test creation requests. Run on a schedule or when new production signals are suspected.
 ---
 

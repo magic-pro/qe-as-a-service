@@ -1,0 +1,22 @@
+{
+  "_comment": "SYNTHETIC GitHub workflow_run webhook. failed_jobs is enriched by the receiver from the Actions jobs API.",
+  "action": "completed",
+  "repository": { "full_name": "synthetic-bank/payments-service", "html_url": "https://github.com/synthetic-bank/payments-service" },
+  "workflow_run": {
+    "id": 9812345670,
+    "name": "go-test",
+    "head_branch": "feat/bankers-rounding",
+    "head_sha": "4f1c2a9be07d33aa51c0e2d9b8f6a1c2d3e4f5a6",
+    "display_title": "Switch amount rounding to bankers (ROUND_HALF_EVEN) per treasury policy TP-12",
+    "event": "pull_request",
+    "status": "completed",
+    "conclusion": "failure",
+    "html_url": "https://github.com/synthetic-bank/payments-service/actions/runs/9812345670",
+    "created_at": "2026-09-26T16:40:12Z",
+    "updated_at": "2026-09-26T16:43:55Z",
+    "pull_requests": [ { "number": 57 } ]
+  },
+  "failed_jobs": [
+    { "name": "unit-tests", "failed_step": "go test ./..." }
+  ]
+}

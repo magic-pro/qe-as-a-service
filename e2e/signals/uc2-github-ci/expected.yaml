@@ -1,0 +1,7 @@
+# UC2 — GitHub CI failure on PR #57 (rounding switched to bankers) → coverage-agent → coverage gap
+signal: knowledge/signals/github/payments-service-run-9812345670.md
+outputs:
+  - path: knowledge/findings/payments-service-run-9812345670-coverage-gap.md
+    type: Coverage Gap
+    derived_from: knowledge/signals/github/payments-service-run-9812345670.md
+    keywords: [TestAmountRounding_HalfUp, HALF_EVEN, amount-rounding, "#57", Test Creation Request]

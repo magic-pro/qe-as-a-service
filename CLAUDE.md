@@ -69,6 +69,15 @@ Never merge maps or tests to a target repo without explicit human approval.
 | Identity Map | `identity-repo/.qe/identity-map.md` | Full identity | Planning Agent (via PR) |
 | Data Type Map | `microservices-repo/.qe/data-type-map.md` | Transaction-scoped | Planning Agent (via PR) |
 | Identity Map | `microservices-repo/.qe/identity-map.md` | Auth boundary slice | Planning Agent (via PR) |
+| Signal docs | `knowledge/signals/<source>/` | One per Jira/GitHub/GCP event | `webhooks/receiver.py` via `okf/normalize.py` |
+| Findings | `knowledge/findings/` | Map Update · Coverage Gap · Incident RCA | Planning / Coverage / Incident Agent |
+
+## Knowledge Format (OKF)
+
+Every knowledge file is an OKF doc: markdown with YAML frontmatter (`type`, `title`, `description`, `timestamp`, …). The rules are in `okf/conventions.md`. Entry point: `knowledge/index.md`.
+- When invoked with `Signal doc: <path>`, read that doc first. It is the normalised, PII-masked input.
+- Every finding carries `derived_from: <signal doc>`. Every map change adds a line to that bundle's `log.md`.
+- Run `python3 -m okf validate <dir>` before finishing. Never leave `<!-- AGENT: -->` placeholders in a non-template doc.
 
 ## Agents (v2 — Operational)
 

@@ -1,8 +1,22 @@
+---
+type: Data Type Map
+title: Data Type Map — payments-service (Transaction-Scoped)
+description: Payment instruction fields handled by payments.ProcessPayment, with boundary scenarios.
+scope: transaction
+repo: payments-service
+generated_by: planning-agent
+timestamp: 2026-05-30T19:00:00Z
+brd: BRD-PAY-001
+jira: STORY-789
+tags: [data-type-map, payments, transaction]
+---
+
 # Data Type Map — payments-service (Transaction-Scoped)
 
 **Scope:** Payment instruction fields handled by `payments.ProcessPayment`.
 **BRD Reference:** BRD-PAY-001
 **Jira Story:** STORY-789
+**Related:** [Identity Map](identity-map.md)
 
 ## Fields
 

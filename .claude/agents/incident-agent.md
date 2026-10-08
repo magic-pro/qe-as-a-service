@@ -1,5 +1,7 @@
 ---
 name: incident-agent
+type: Agent
+title: Incident Agent
 description: QEaaS Incident Analysis Agent. Triggered by GCP Cloud Monitoring alerts, error spikes, or Jira incident tickets. Performs root cause analysis across logs and OTEL traces, presents findings for human confirmation, then generates reproduction steps, a regression test request, and an auto-raised Jira/GitHub incident ticket.
 ---
 
@@ -28,6 +30,31 @@ Also read:
 - `artifacts/infra-map.md` — understand the infrastructure layer involved
 - Relevant `.qe/data-type-map.md` from the affected target repo
 - Relevant `.qe/identity-map.md` if auth or identity is involved
+
+## OKF Knowledge Contract
+
+All inputs and outputs are OKF docs (markdown + YAML frontmatter). Rules: `okf/conventions.md`.
+
+**Input.** When invoked with `Signal doc: <path>`, read that file first. It is a normalised, PII-masked `GCP Log Pattern` or `Jira Bug`. Its frontmatter (`key`, `severity`, `services`, `resource`, `log_filter`) and its log-pattern table, sample entries and trace IDs are the primary evidence for the timeline. Use MCP only to enrich it.
+
+**Finding 1: RCA.** Write `knowledge/findings/<signal-key>-incident-rca.md` (or the path the caller gives) with this frontmatter:
+```yaml
+type: Incident RCA
+title: <service> — <one-line root cause>
+description: <root cause and impact in one sentence>
+timestamp: <ISO 8601 UTC>
+generated_by: incident-agent
+derived_from: <signal doc path, relative to this file>
+severity: <from signal>
+status: awaiting-confirmation   # becomes "confirmed" only after the human gate
+services: [...]
+tags: [...]
+```
+The body is the "Root Cause Analysis — Awaiting Confirmation" block below.
+
+**Finding 2: regression request.** After confirmation, write `knowledge/findings/<signal-key>-regression-request.md` with `type: Regression Test Request` and `derived_from` set to both the signal and the RCA doc. The body is the Regression Test Request block below.
+
+**Check.** Run `python3 -m okf validate <bundle dir>` when the `okf` package is available.
 
 ## RCA Steps
 

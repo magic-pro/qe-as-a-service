@@ -28,3 +28,8 @@ ci-output/
 
 # QEaaS E2E run artifacts
 e2e/runs/
+
+# OKF runtime docs written by the webhook receiver
+knowledge/signals/*/*.md
+knowledge/findings/*.md
+!knowledge/findings/index.md

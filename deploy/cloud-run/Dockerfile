@@ -14,6 +14,9 @@ COPY webhooks/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY webhooks/ ./webhooks/
+COPY okf/ ./okf/
+COPY knowledge/ ./knowledge/
+COPY log.md .
 COPY .claude/agents/ ./.claude/agents/
 COPY .claude/commands/ ./.claude/commands/
 COPY .claude/settings.json ./.claude/settings.json

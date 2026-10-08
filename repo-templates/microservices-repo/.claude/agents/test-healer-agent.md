@@ -1,5 +1,7 @@
 ---
 name: test-healer-agent
+type: Agent
+title: Test Healer Agent
 description: Microservices repo Test Healer Agent. Triggered by CI failures — both Go test failures and static analysis findings (golangci-lint, staticcheck, gosec). Analyses output, classifies findings, auto-fixes safe issues, raises PRs for complex fixes, escalates security and finance-critical findings to humans.
 ---
 
