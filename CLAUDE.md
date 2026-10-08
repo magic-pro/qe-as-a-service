@@ -70,6 +70,8 @@ Never merge maps or tests to a target repo without explicit human approval.
 | Data Type Map | `microservices-repo/.qe/data-type-map.md` | Transaction-scoped | Planning Agent (via PR) |
 | Identity Map | `microservices-repo/.qe/identity-map.md` | Auth boundary slice | Planning Agent (via PR) |
 | Signal docs | `knowledge/signals/<source>/` | One per Jira/GitHub/GCP event | `webhooks/receiver.py` via `okf/normalize.py` |
+| Story Map | `knowledge/findings/<date>-story-map.md` | Correlated proto / incident / Jira / Confluence signals | QE Analysis Agent |
+| Build Report | `knowledge/findings/<key>-build-report.md` | Tests generated from approved Story Map | Builder Agent |
 | Findings | `knowledge/findings/` | Map Update · Coverage Gap · Incident RCA | Planning / Coverage / Incident Agent |
 
 ## Knowledge Format (OKF)
@@ -78,6 +80,24 @@ Every knowledge file is an OKF doc: markdown with YAML frontmatter (`type`, `tit
 - When invoked with `Signal doc: <path>`, read that doc first. It is the normalised, PII-masked input.
 - Every finding carries `derived_from: <signal doc>`. Every map change adds a line to that bundle's `log.md`.
 - Run `python3 -m okf validate <dir>` before finishing. Never leave `<!-- AGENT: -->` placeholders in a non-template doc.
+
+## Agents (v2 — Signal-Driven: Analysis + Build)
+
+### QE Analysis Agent (lives here)
+- **Invoke**: `/qe-analysis [--since <hours>] [--proto-repo <owner/repo>]`
+- **Scheduled**: Nightly (add to nightly workflow)
+- **Input**: api.proto repo merges (GitHub MCP), incident findings (`knowledge/findings/`), Jira stories (Atlassian MCP), Confluence BRDs/ADRs (Atlassian MCP)
+- **Output**: `knowledge/findings/<YYYY-MM-DD>-story-map.md` with `status: pending-review`
+- **Human gate**: Human reviews Story Map, fills decision table, sets `status: approved`
+- **Agent definition**: `.claude/agents/qe-analysis-agent.md`
+
+### Builder Agent (lives here)
+- **Invoke**: `/build-tests --story-map <path> [--lang go|pytest|playwright|typescript]`
+- **Precondition**: Story Map must have `status: approved`
+- **Input**: Approved Story Map, framework templates in `frameworks/`, target repo `.qe/` maps
+- **Output**: Generated test files in `frameworks/<lang>/test_type/<type>/`, build report OKF doc, DRAFT PR on target repo
+- **Human gate**: Engineer reviews DRAFT PR, confirms traceability, removes DRAFT when satisfied
+- **Agent definition**: `.claude/agents/builder-agent.md`
 
 ## Agents (v2 — Operational)
 
