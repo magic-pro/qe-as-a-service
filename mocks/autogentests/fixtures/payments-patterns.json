@@ -1,0 +1,17 @@
+{
+  "patterns": [
+    "Monetary amounts must use Decimal type — never float or double",
+    "Payment amount boundary conditions: zero, negative, minimum (0.01), maximum per-currency limit",
+    "Duplicate payment detection: same amount + recipient + timestamp within 60s window",
+    "Currency mismatch between source account and payment currency must be handled explicitly",
+    "SWIFT/SEPA reference codes must be validated against format regex",
+    "Velocity checks: flag >3 payments to new payee within 24h as fraud signal"
+  ],
+  "constraints": [
+    "Monetary amounts: Decimal(precision=19, scale=4) — test to 4 decimal places",
+    "Currency codes: ISO 4217 only (GBP, EUR, USD, AUD)",
+    "Account numbers: synthetic BSB/sort-code format only",
+    "Transaction IDs: UUID v4 format in all fixtures"
+  ],
+  "prior_analyses": []
+}

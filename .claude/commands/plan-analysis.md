@@ -6,10 +6,13 @@ description: Invoke the Planning & Analysis Agent. Provide BRD text, Jira story 
 Invoke the Planning & Analysis Agent as defined in `.claude/agents/planning-agent.md`.
 
 The user may provide any combination of:
+- GitHub PR URL or PR number — **analyse the diff first before anything else**
 - BRD text (pasted directly or Confluence page URL/ID)
 - Jira story ID or URL
 - Architecture diagram description or Confluence page
 - GitHub repo URL for a new service or dependency change
+
+If a PR is provided, fetch the diff via GitHub MCP and run Step 0 (Diff Analysis) before all other steps. The diff is the highest-signal input — it reflects what has actually changed, not just what was planned.
 
 If MCP tools are connected, use them to fetch source documents. If not, work with pasted input.
 

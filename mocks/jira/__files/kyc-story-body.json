@@ -1,0 +1,41 @@
+{
+  "id": "10001",
+  "key": "ABC-123",
+  "self": "http://localhost:8081/rest/api/3/issue/10001",
+  "fields": {
+    "summary": "KYC Identity Verification — Document Upload and IDV Flow",
+    "issuetype": { "name": "Story" },
+    "status": { "name": "In Progress" },
+    "priority": { "name": "High" },
+    "labels": ["identity", "kyc", "aml", "compliance"],
+    "customfield_10014": "ABC-120",
+    "description": {
+      "type": "doc",
+      "version": 1,
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "As a new customer, I need to upload identity documents and complete IDV so that my account can be activated in compliance with KYC regulations."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Acceptance Criteria: 1) Passport and driving licence accepted. 2) Documents expire >30 days from upload date. 3) AML screening completes within 5 seconds. 4) PEP/sanctions check performed on all new customers. 5) Failed IDV shows clear error with retry option. 6) Audit log entry created for every verification attempt."
+            }
+          ]
+        }
+      ]
+    },
+    "assignee": { "displayName": "Dev User" },
+    "reporter": { "displayName": "Product Owner" },
+    "created": "2026-09-15T09:00:00.000+0000",
+    "updated": "2026-10-01T14:22:00.000+0000"
+  }
+}

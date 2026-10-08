@@ -1,0 +1,17 @@
+# Override file: swap real autogentests service for mock stub.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.mock.yml up -d
+#
+# In v1 both services in docker-compose.yml are already mocks.
+# This override becomes relevant in v2 when docker-compose.yml points to the
+# real autogentests wrapper (build: ../autogentests) — use this override in CI
+# to restore mock behaviour without changing docker-compose.yml.
+services:
+  mock-autogentests:
+    build: ./mocks/autogentests
+    ports:
+      - "8082:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

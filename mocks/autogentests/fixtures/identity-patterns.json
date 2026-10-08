@@ -1,0 +1,16 @@
+{
+  "patterns": [
+    "KYC identity verification must check document expiry date",
+    "AML screening required before account activation for all new customers",
+    "PEP and sanctions list check is a first-class test scenario, not an edge case",
+    "Document upload must validate file type (passport, driving licence, utility bill)",
+    "Re-verification required if document expires within 30 days"
+  ],
+  "constraints": [
+    "PII fields must use synthetic data only — never real document numbers",
+    "Document numbers: masked format NNN-XXXX-NNN in all test fixtures",
+    "Date of birth: must be ≥18 years in the past for all valid-customer scenarios",
+    "Address fields: use Royal Mail PAF-compliant synthetic addresses"
+  ],
+  "prior_analyses": []
+}

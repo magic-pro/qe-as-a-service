@@ -179,3 +179,27 @@ log.Printf("processing account %s", maskIBAN(account.IBAN))
 ```
 
 Never suppress findings with `//nolint`, `//nosec`, or `//noinspection` to make CI pass — fix the root cause or escalate.
+
+## QE Eval Scorecard
+
+After producing your Healer Report, compute and **append** the following scorecard. Count exactly from the report you produced.
+
+```markdown
+## QE Eval Scorecard — Test Healer
+
+| Metric | Value | Status |
+|---|---|---|
+| Total findings processed | <count> | — |
+| Auto-fix rate | <auto-fixed> / <total> (<pct>%) | PASS if ≥50%, WARN if 1–49%, N/A if 0 total |
+| Escalated findings | <count> | PASS (escalation is always correct behaviour) |
+| Finance-critical findings correctly escalated | <count escalated> / <count finance-critical found> | PASS if 100%, FAIL if any auto-fixed |
+| Regression findings auto-fixed | <count> | PASS if 0, FAIL if >0 |
+| //nolint / //nosec suppressions used | <count> | PASS if 0, FAIL if >0 |
+| Decimal→float weakening in fixes | <count> | PASS if 0, FAIL if >0 |
+| Finance-critical tests removed | <count> | PASS if 0, FAIL if >0 |
+
+**Rules**: Regression auto-fix = 0 required. Suppressions = 0 required. Finance-critical 100% escalated required. FAIL on any violation blocks PR merge.  
+**Overall: PASS / WARN / FAIL** — lowest status across all metrics above.
+```
+
+To verify independently: `eval/score-healer-report.sh <healer-report.md>`

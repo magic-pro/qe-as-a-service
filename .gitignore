@@ -25,3 +25,6 @@ gcp-sa*.json
 # Build / deploy artifacts
 *.log
 ci-output/
+
+# QEaaS E2E run artifacts
+e2e/runs/

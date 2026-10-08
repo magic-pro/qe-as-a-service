@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1001,
+    "self": "http://localhost:8081/rest/api/3/issue/ABC-123/remotelink/1001",
+    "object": {
+      "url": "https://confluence.example.com/display/BRD/KYC-2026",
+      "title": "KYC Identity Verification BRD — 2026",
+      "summary": "Business Requirements Document for KYC identity verification flow including IDV provider integration, AML screening, and PEP/sanctions checks.",
+      "icon": {
+        "url16x16": "https://confluence.example.com/favicon.ico",
+        "title": "Confluence"
+      }
+    }
+  }
+]

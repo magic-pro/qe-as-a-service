@@ -1,0 +1,14 @@
+{
+  "patterns": [
+    "All API endpoints require authentication token validation",
+    "Audit log entries must include: actor, action, resource, timestamp, outcome",
+    "Regulatory fields must be validated at every service boundary",
+    "Null and empty string must be treated as distinct values in all validation logic"
+  ],
+  "constraints": [
+    "Timestamps: ISO 8601 UTC format (YYYY-MM-DDTHH:MM:SSZ)",
+    "All monetary values: Decimal — never float",
+    "PII fields: synthetic data only"
+  ],
+  "prior_analyses": []
+}
