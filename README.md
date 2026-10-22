@@ -1,6 +1,6 @@
 # QEaaS — Quality Engineering as a Service
 
-A multi-agent QE framework for finance-sector systems, built on Claude Code. Operates across the full software lifecycle — from requirements analysis through production incident response — with finance-specific constraints baked in at every layer.
+A multi-agent QE framework for finance-sector systems. Operates across the full software lifecycle — from requirements analysis through production incident response — with finance-specific constraints baked in at every layer.
 
 ---
 
