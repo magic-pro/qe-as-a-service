@@ -51,9 +51,31 @@
   body.saver header, body.saver #feed, body.saver #replay { opacity: 0; pointer-events: none; }
   body.saver { cursor: none; }
   body.nofeed #feed { display: none; }
+  #overview { display: none; }
+  body.overview { height: 100dvh; display: flex; flex-direction: column; }
+  body.overview header { position: static; flex-wrap: wrap; gap: 8px; }
+  body.overview #world { visibility: hidden; }
+  body.overview #layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(210px, 30%); gap: 12px;
+    flex: 1; min-height: 0; overflow: auto; padding: 8px 16px 16px; }
+  body.overview.nofeed #layout { grid-template-columns: minmax(0, 1fr); }
+  body.overview #overview { display: block; min-width: 0; }
+  body.overview #feed { position: static; width: auto; align-self: start; max-height: 65vh; }
+  body.overview #replay { position: static; margin: 0 16px 12px; flex-wrap: wrap; }
+  .group { margin-bottom: 14px; }
+  .group h2 { font-size: 15px; margin: 0 0 4px; }
+  .source-state, .agent-meta { color: var(--muted); font-size: 12px; }
+  .source-state { margin: 0 0 9px; }
+  .roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 8px; }
+  .agent-card { min-width: 0; padding: 8px 10px; text-align: left; overflow-wrap: anywhere; }
+  .agent-card b, .agent-card span { display: block; }
+  .agent-card i { vertical-align: 1px; }
+  @media (max-width: 740px) {
+    body.overview #layout { grid-template-columns: minmax(0, 1fr); }
+    body.overview #feed { max-height: 280px; }
+  }
 </style>
 </head>
-<body>
+<body class="overview">
 <canvas id="world"></canvas>
 <header>
   <h1>🧪 QEaaS Agent Twin</h1>
@@ -62,9 +84,13 @@
   <span class="spacer"></span>
   <button id="btnReplay" title="R">⏪ Replay</button>
   <button id="btnFeed" class="on" title="A">Activity</button>
+  <button id="btnView" aria-pressed="false">Animated studios</button>
   <button id="btnSaver" title="F">🖥 Screensaver</button>
 </header>
-<aside id="feed"><h2 id="feedTitle">Live activity</h2><div id="events"></div></aside>
+<div id="layout">
+  <main id="overview" aria-label="Agent overview"></main>
+  <aside id="feed"><h2 id="feedTitle">Live activity</h2><div id="events"></div></aside>
+</div>
 <div id="replay">
   <button id="btnPlay">▶</button>
   <select id="speed">
@@ -160,17 +186,45 @@
   }
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  function renderOverview(lanes, names) {
+    const pane = $('overview');
+    const focused = document.activeElement?.dataset.lane;
+    const card = (lane) => {
+      const state = lane.since ? LABELS[lane.status] : 'Unobserved';
+      const owner = lane.parent && (names[lane.parent] || 'Session ' + lane.parent.split(':')[2].slice(0, 8));
+      const related = owner ? `Delegated in ${owner}` : SOURCE[lane.scope] || lane.scope;
+      return `<button type="button" class="agent-card" data-lane="${esc(lane.id)}">
+        <b>${esc(lane.name)}</b><span><i class="dot" style="background:${COLORS[lane.status]}"></i>${state}</span>
+        <span class="agent-meta">${esc(related)}</span></button>`;
+    };
+    const group = (title, items, source, empty) => `<section class="group"><h2>${title}</h2>
+      ${source ? `<p class="source-state">${esc(source)}</p>` : ''}
+      ${items.length ? `<div class="roster">${items.map(card).join('')}</div>` : `<p class="agent-meta">${empty}</p>`}</section>`;
+    pane.innerHTML = group('QE agents', lanes.filter((l) => l.kind === 'qe' && !l.worktree),
+      '', 'No QE agent definitions found.')
+      + group('Local QE runs', lanes.filter((l) => l.kind === 'qe' && l.worktree),
+        replay ? '' : SOURCE_STATE[data.sources.qe], 'No local QE runs in this view.')
+      + group('GitHub Copilot sessions and subagents', lanes.filter((l) => l.kind === 'copilot'),
+        replay ? '' : SOURCE_STATE[data.sources.copilot], 'No Copilot events in this view.');
+    if (focused) [...pane.querySelectorAll('[data-lane]')].find((b) => b.dataset.lane === focused)?.focus({ preventScroll: true });
+  }
+
   function renderChrome() {
     if (!data) return;
     const lanes = currentLanes();
     const counts = {};
-    lanes.forEach((l) => { counts[l.status] = (counts[l.status] || 0) + 1; });
-    $('chips').innerHTML = Object.keys(LABELS)
+    const labels = { ...LABELS, unobserved: 'Unobserved' };
+    lanes.forEach((l) => {
+      const state = l.since ? l.status : 'unobserved';
+      counts[state] = (counts[state] || 0) + 1;
+    });
+    $('chips').innerHTML = Object.keys(labels)
       .filter((s) => counts[s])
-      .map((s) => `<span class="chip"><span class="dot" style="background:${COLORS[s]}"></span><b>${counts[s]}</b> ${LABELS[s].toLowerCase()}</span>`)
+      .map((s) => `<span class="chip"><span class="dot" style="background:${COLORS[s] || COLORS.unknown}"></span><b>${counts[s]}</b> ${labels[s].toLowerCase()}</span>`)
       .join('');
 
     const names = Object.fromEntries(data.lanes.map((l) => [l.id, l.name]));
+    if (document.body.classList.contains('overview')) renderOverview(lanes, names);
     const t = nowMs();
     const evs = data.timeline.filter((e) => ms(e.ts) <= t && names[e.lane]).slice(-60).reverse();
     $('feedTitle').textContent = replay ? 'Replay activity' : 'Live activity';
@@ -406,6 +460,11 @@
       syncScrub();
     }
 
+    if (document.body.classList.contains('overview')) {
+      requestAnimationFrame(frame);
+      return;
+    }
+
     const sky = skyAt(nowMs());
     drawSky(W, H, sky, time);
     rooms = [];
@@ -484,7 +543,10 @@
   }
   function toggleSaver() {
     const on = !document.fullscreenElement;
-    if (on) document.documentElement.requestFullscreen?.().catch(() => {});
+    if (on) {
+      setOverview(false);
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
     else document.exitFullscreen?.();
     document.body.classList.toggle('saver', on);
   }
@@ -500,6 +562,21 @@
   });
   $('btnFeed').onclick = toggleFeed;
   $('btnSaver').onclick = toggleSaver;
+  function setOverview(on) {
+    document.body.classList.toggle('overview', on);
+    $('btnView').setAttribute('aria-pressed', String(!on));
+    $('btnView').textContent = on ? 'Animated studios' : 'Agent overview';
+    $('detail').style.display = 'none';
+    selected = null;
+    renderChrome();
+  }
+  $('btnView').onclick = () => setOverview(!document.body.classList.contains('overview'));
+  $('overview').onclick = (e) => {
+    const card = e.target.closest('[data-lane]');
+    if (!card) return;
+    const position = card.getBoundingClientRect();
+    showDetail(card.dataset.lane, Math.max(0, position.left - 12), position.top);
+  };
   addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     if (e.key === 'f' || e.key === 'F') toggleSaver();
@@ -517,7 +594,6 @@
     canvas.style.cursor = rooms.some((r) => e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h) ? 'pointer' : 'default';
   });
 
-  if (innerWidth < 900) toggleFeed();   // small screens: studios first, feed on demand
   setInterval(() => { $('clock').textContent = fmtTime(nowMs()); }, 500);
   setInterval(poll, POLL_MS);
   setInterval(() => { if (!replay) renderChrome(); }, 15000);

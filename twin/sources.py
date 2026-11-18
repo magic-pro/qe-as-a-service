@@ -244,9 +244,14 @@ def snapshot(root: Path = REPO_ROOT, *, hours: int = 24,
         health = {"copilot": "unavailable", "qe": "unavailable"}
 
     runtime = {}
+    delegated = {(row["worktree"], row["child"]) for row in rows
+                 if row["source"] == "copilot" and row["child"]}
     for row in rows:
         source, worktree, run, child = (row[k] for k in ("source", "worktree", "run", "child"))
         copilot = source == "copilot"
+        # A delegated agent can also emit its own turn hooks under its child ID.
+        if copilot and not child and (worktree, run) in delegated:
+            continue
         health["copilot" if copilot else "qe"] = (
             "disabled" if copilot and not enabled else "observed"
         )
