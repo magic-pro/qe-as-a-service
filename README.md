@@ -267,21 +267,30 @@ Applied by every agent, baked into every agent prompt:
 
 ## Agent Twin Dashboard
 
-A live "studio" view of every QE agent plus your GitHub Copilot sessions for this repo — who is working, who is waiting on you, and what just finished. Zero dependencies (Python 3.9+ stdlib).
+A local studio view of observed QE agent runs and GitHub Copilot sessions. The dashboard itself uses only the Python 3.9+ standard library.
 
 ```bash
 python3 -m twin serve            # open http://127.0.0.1:8787
-python3 -m twin serve --all-copilot   # include Copilot sessions from every repo
 ```
 
-- **Live status:** each agent in `.claude/agents/` and `repo-templates/*/.claude/agents/` gets a studio. Status comes from `knowledge/agent-activity.jsonl` (written by the webhook receiver and `python3 -m twin event`), OKF docs (a `pending-review` Story Map shows as *Needs you*), `log.md` lines, and `~/.copilot/session-state` (tool names/descriptions only, never prompt text).
-- **Day/night:** the sky and studio lighting follow your local clock.
-- **Screensaver:** press **F** (or 🖥) for full screen; controls hide after 4 s idle.
-- **Replay:** press **R** to scrub or play back the last 24 h at 60–3600×.
-- **Report activity manually:** `python3 -m twin event <agent> <working|waiting|done|failed|idle> "message"`.
-- **JSON:** `python3 -m twin snapshot` or `GET /api/state?hours=24`.
+- **QE:** Start an agent with `python3 -m twin run <agent> "<prompt>"`, or use the existing webhook receiver running locally from this checkout. Separate run studios show Claude Code process starts and exits; a successful exit does not prove a finding was written or a PR was raised. Local OKF docs and `log.md` are separate evidence. A `pending-review` Story Map can show **Needs review** without claiming a process is active.
+- **Copilot:** Review [the repository hooks](.github/hooks/qe-twin.json), then run `python3 -m twin copilot enable` and open a **new local session** in a worktree containing these hooks. Trust the checkout when prompted. The CLI and Copilot app support repository hooks; available events depend on the installed client and policy. Sessions and subagents appear only when their hooks report activity. `python3 -m twin copilot disable` stops future capture; it does not erase replay history.
+- **Second monitor and replay:** Press **F** for full screen and **R** to scrub or play observed events from the last 24 hours. Scroll to move between studios. An open run or session without a lifecycle update for 30 minutes becomes **Unconfirmed**, not completed. Inspect the same feed with `python3 -m twin snapshot` or `GET /api/state?hours=24`.
 
-Tune with `QE_TWIN_ACTIVITY_LOG` (journal path) and `QE_TWIN_RUN_TTL_MINUTES` (default 30; a run with no update for this long shows as idle). Tests: `python3 -m unittest discover -s twin/tests -t .`
+Worktrees of the same clone share a private `~/.qe-twin/` SQLite journal. Capture is scoped to the `magic-pro/qe-as-a-service` GitHub origin and stores only lifecycle metadata. It does not read private Copilot state or store prompts, tool payloads, or transcripts. Replay is limited to seven days and the newest 6,000 lifecycle events, with older rows pruned on writes. The dashboard shows recent run studios, not a complete audit trail. GitHub Actions, Cloud Run, cloud Copilot sessions, and uninstrumented local runs are not tracked.
+
+### Sample use case: triage a checkout regression
+
+1. Start the dashboard and opt in to Copilot capture as above.
+2. In a second terminal, run the Incident Agent using a synthetic incident. `--read-only` disables agent tools and MCP servers, so this run can suggest a regression test but cannot file tickets or modify files.
+
+   ```bash
+   python3 -m twin run --read-only incident-agent \
+     "Synthetic test: after a timeout, retrying checkout with the same idempotency key showed two receipts. Give two hypotheses and propose one regression test. Reply in chat only."
+   ```
+
+3. In a new local Copilot session for this checkout, ask: **“Review the same synthetic case. Suggest an assertion that distinguishes duplicate receipts from duplicate charges. Do not edit files or call external services.”**
+4. Compare the observed QE process and Copilot session in their studios. Press **R** to see which one started or finished first. Read the actual findings in the agent outputs, not in the dashboard. The incident is synthetic; the displayed runs come from the real agents.
 
 ## MCP Servers
 

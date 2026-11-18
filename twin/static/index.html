@@ -78,9 +78,10 @@
 <div id="err"></div>
 <script>
 (() => {
-  const COLORS = { working: '#22d3ee', waiting: '#fbbf24', done: '#4ade80', failed: '#f87171', idle: '#64748b', ended: '#334155' };
-  const LABELS = { working: 'Working', waiting: 'Needs you', done: 'Done', failed: 'Failed', idle: 'Idle', ended: 'Ended' };
-  const RUN_TTL = 30 * 60e3, DONE_TTL = 10 * 60e3, COPILOT_STALE = 30 * 60e3, COPILOT_WAIT_STALE = 4 * 3600e3;
+  const COLORS = { working: '#22d3ee', waiting: '#fbbf24', done: '#4ade80', failed: '#f87171', idle: '#64748b', ended: '#334155', unknown: '#94a3b8' };
+  const LABELS = { working: 'Working', waiting: 'Needs review', done: 'Done', failed: 'Failed', idle: 'Idle', ended: 'Ended', unknown: 'Unconfirmed' };
+  const SOURCE = { copilot: 'Copilot hook', 'qe-manual': 'Local QE launcher', 'qe-webhook': 'Local webhook', okf: 'OKF artifact', 'log.md': 'QE change log' };
+  const SOURCE_STATE = { disabled: 'Capture disabled', unobserved: 'No events observed', unavailable: 'Source unavailable', observed: 'Events observed' };
   const POLL_MS = 3000;
 
   const canvas = document.getElementById('world');
@@ -92,6 +93,11 @@
   let rooms = [];             // hit boxes from last frame
   let selected = null;
   let saverTimer = null;
+  let scrollY = 0, maxScroll = 0;
+  canvas.addEventListener('wheel', (event) => {
+    scrollY = Math.max(0, Math.min(maxScroll, scrollY + event.deltaY));
+    event.preventDefault();
+  }, { passive: false });
   const stars = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() * 1.4 + .3, p: Math.random() * 6 }));
 
   // ------------------------------------------------------------ data
@@ -117,7 +123,6 @@
     return h;
   }
 
-  // Lane state at replay time t, mirroring the server's TTL rules.
   function stateAt(lane, t) {
     let last = data.initial[lane.id] || null;
     for (const ev of data.timeline) {
@@ -125,23 +130,18 @@
       if (ts > t) break;
       if (ev.lane === lane.id) last = ev;
     }
-    if (!last) return { status: 'idle', activity: 'No activity yet', since: null };
-    let status = last.status;
-    const age = t - ms(last.ts);
-    if (lane.kind === 'qe') {
-      if (status === 'working' && age > RUN_TTL) status = 'idle';
-      if ((status === 'done' || status === 'failed') && age > DONE_TTL) status = 'idle';
-    } else {
-      if (status === 'working' && age > COPILOT_STALE) status = 'idle';
-      if (status === 'waiting' && age > COPILOT_WAIT_STALE) status = 'idle';
+    if (!last) return { status: 'unknown', activity: 'No activity observed', since: null };
+    if (last.expires && t >= ms(last.expires)) {
+      return { status: 'unknown', activity: 'No recent lifecycle update', since: last.ts };
     }
-    return { status, activity: last.label, since: last.ts };
+    return { status: last.status, activity: last.label, since: last.ts };
   }
 
   function currentLanes() {
     if (!data) return [];
     if (!replay) return data.lanes;
-    return data.lanes.map((l) => ({ ...l, ...stateAt(l, replay.t) }));
+    return data.lanes.map((l) => ({ ...l, ...stateAt(l, replay.t) }))
+      .filter((l) => !l.worktree || l.since);
   }
 
   function nowMs() { return replay ? replay.t : Date.now(); }
@@ -165,7 +165,7 @@
     const lanes = currentLanes();
     const counts = {};
     lanes.forEach((l) => { counts[l.status] = (counts[l.status] || 0) + 1; });
-    $('chips').innerHTML = ['working', 'waiting', 'failed', 'done', 'idle', 'ended']
+    $('chips').innerHTML = Object.keys(LABELS)
       .filter((s) => counts[s])
       .map((s) => `<span class="chip"><span class="dot" style="background:${COLORS[s]}"></span><b>${counts[s]}</b> ${LABELS[s].toLowerCase()}</span>`)
       .join('');
@@ -176,7 +176,7 @@
     $('feedTitle').textContent = replay ? 'Replay activity' : 'Live activity';
     $('events').innerHTML = evs.map((e) => `
       <div class="ev"><div class="meta"><span class="dot" style="background:${COLORS[e.status]}"></span>
-        <span>${esc(names[e.lane])}</span><span class="spacer"></span><span>${ago(e.ts)}</span></div>
+        <span>${esc(names[e.lane])} · ${esc(SOURCE[e.source])}</span><span class="spacer"></span><span>${ago(e.ts)}</span></div>
         <div class="lbl">${esc(e.label)}</div></div>`).join('') || '<div class="ev">No activity in the last 24 hours.</div>';
     if (selected) showDetail(selected);
   }
@@ -189,7 +189,8 @@
     const t = nowMs();
     const evs = data.timeline.filter((e) => e.lane === id && ms(e.ts) <= t).slice(-12).reverse();
     box.innerHTML = `<h3>${esc(lane.name)}</h3>
-      <div class="desc">${esc(lane.kind === 'copilot' ? 'GitHub Copilot session' : 'QE agent · ' + (lane.scope || ''))}${lane.model ? ' · ' + esc(lane.model) : ''}</div>
+      <div class="desc">${esc(SOURCE[lane.scope] || lane.scope)}${lane.worktree ? ' · Worktree ' + esc(lane.worktree.slice(0, 8)) : ''}</div>
+      ${lane.parent ? `<div class="desc">Parent session ${esc(lane.parent.split(':')[2].slice(0, 8))}</div>` : ''}
       <div class="desc">${esc(lane.description)}</div>
       <div><span class="dot" style="background:${COLORS[lane.status]}"></span><b>${LABELS[lane.status]}</b> — ${esc(lane.activity)} <span style="color:var(--muted)">${ago(lane.since)}</span></div>
       ${evs.map((e) => `<div class="ev"><div class="meta"><span class="dot" style="background:${COLORS[e.status]}"></span><span>${fmtTime(ms(e.ts))}</span></div><div class="lbl">${esc(e.label)}</div></div>`).join('')}`;
@@ -421,16 +422,23 @@
     const rows = Math.ceil(qe.length / cols) + Math.max(1, Math.ceil(cp.length / cols));
     const rh = Math.max(110, Math.min(rw * .62, (bottom - top - 2 * 26 - rows * gap) / rows));
 
-    let y = drawWing(`QE agent studios · ${qe.length}`, qe, left, top, availW, cols, rw, rh, gap, sky, time);
+    maxScroll = Math.max(0, rows * (rh + gap) + 60 - (bottom - top));
+    scrollY = Math.min(maxScroll, scrollY);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, top, W, Math.max(0, bottom - top)); ctx.clip();
+    const qeStatus = replay ? '' : ` · ${SOURCE_STATE[data.sources.qe]}`;
+    const cpStatus = replay ? '' : ` · ${SOURCE_STATE[data.sources.copilot]}`;
+    let y = drawWing(`QE studios (${qe.length})${qeStatus}`, qe, left, top - scrollY, availW, cols, rw, rh, gap, sky, time);
     y += 6;
     if (cp.length) {
-      drawWing(`GitHub Copilot sessions · ${cp.length}`, cp, left, y, availW, cols, rw, rh, gap, sky, time);
+      drawWing(`GitHub Copilot studios (${cp.length})${cpStatus}`, cp, left, y, availW, cols, rw, rh, gap, sky, time);
     } else {
       ctx.font = '700 11px sans-serif'; ctx.fillStyle = 'rgba(226,232,240,.75)';
       ctx.fillText('GITHUB COPILOT SESSIONS', left, y + 12);
       ctx.font = '12px sans-serif'; ctx.fillStyle = 'rgba(226,232,240,.6)';
-      ctx.fillText('No matching Copilot sessions in the last 24 hours.', left, y + 36);
+      ctx.fillText(replay ? 'No Copilot events yet in this replay.' : SOURCE_STATE[data.sources.copilot], left, y + 36);
     }
+    ctx.restore();
     requestAnimationFrame(frame);
   }
 

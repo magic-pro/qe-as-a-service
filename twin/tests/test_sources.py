@@ -1,147 +1,138 @@
-"""Tests for the agent twin data sources."""
+"""Verify the journal-to-studio contract, without requiring agent credentials."""
 
-from __future__ import annotations
-
-import json
+import subprocess
+import sys
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from http.client import HTTPConnection
 from pathlib import Path
+from threading import Thread
+from unittest.mock import patch
 
-from twin import sources as s
+from twin import activity, copilot_hook, qe_run, server, sources
 
-NOW = datetime(2025, 1, 15, 12, 0, tzinfo=timezone.utc)
-
-
-def ts(minutes_ago: float) -> str:
-    return (NOW - timedelta(minutes=minutes_ago)).isoformat().replace("+00:00", "Z")
+NOW = datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc)
 
 
-def write(path: Path, text: str) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
-    return path
+class TwinTests(unittest.TestCase):
+    def setUp(self):
+        work = tempfile.TemporaryDirectory()
+        self.addCleanup(work.cleanup)
+        self.root = Path(work.name).resolve()
+        self.journal = self.root / "private" / "test.sqlite3"
 
+    def test_only_opted_in_hook_metadata_reaches_the_studios(self):
+        with patch.object(activity, "scope", return_value=(self.journal, "worktree")):
+            data = {"cwd": str(self.root), "session_id": "session-1",
+                    "prompt": "private-prompt", "toolArgs": {"token": "private-token"}}
+            copilot_hook.capture("UserPromptSubmit", data)
+            self.assertFalse(self.journal.exists())
+            activity.enable_copilot(self.journal, True)
+            copilot_hook.capture("UserPromptSubmit", data)
+            copilot_hook.capture("SubagentStart", {**data, "agent_id": "child-1"})
+            copilot_hook.capture("SubagentStop", {**data, "agentId": "child-1"})
+            activity.enable_copilot(self.journal, False)
+            copilot_hook.capture("Stop", data)
+        state = sources.snapshot(self.root, journal=self.journal)
+        child = next(lane for lane in state["lanes"] if lane.get("parent"))
+        self.assertEqual(child["status"], "ended")
+        self.assertEqual(state["sources"]["copilot"], "disabled")
+        self.assertEqual(len(state["timeline"]), 3)
+        self.assertNotIn(b"private-", self.journal.read_bytes())
 
-def make_repo(root: Path) -> None:
-    write(root / ".claude/agents/builder-agent.md",
-          "---\nname: builder-agent\ntype: Agent\ntitle: Builder\ndescription: Builds tests\n---\nbody\n")
-    write(root / ".claude/agents/qe-analysis-agent.md",
-          "---\nname: qe-analysis-agent\ntype: Agent\ntitle: Analyst\ndescription: Story maps\n---\nbody\n")
-    write(root / ".claude/agents/planning-agent.md",
-          "---\nname: planning-agent\ntype: Agent\ntitle: Planner\ndescription: Plans\n---\nbody\n")
+    def test_scope_accepts_worktrees_but_not_lookalike_origins(self):
+        repo = self.root / "repo"
+        repo.mkdir()
 
+        def git(*args):
+            subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
 
-def make_session(state: Path, sid: str, events: list, workspace: str = "") -> Path:
-    d = state / sid
-    write(d / "events.jsonl", "\n".join(json.dumps(e) for e in events) + "\n")
-    if workspace:
-        write(d / "workspace.yaml", workspace)
-    return d
+        git("init")
+        git("-c", "user.name=Test", "-c", "user.email=test@example.com",
+            "commit", "--allow-empty", "-m", "Init")
+        git("remote", "add", "origin", "git@github.com:magic-pro/qe-as-a-service.git")
+        another = self.root / "worktree"
+        git("worktree", "add", "--detach", str(another), "HEAD")
+        path, key = activity.scope(repo)
+        other_path, other_key = activity.scope(another)
+        self.assertEqual(path, other_path)
+        self.assertNotEqual(key, other_key)
+        git("remote", "set-url", "origin", "https://example.com/magic-pro/qe-as-a-service")
+        self.assertIsNone(activity.scope(another))
 
+    def test_active_runs_do_not_overwrite_each_other_or_review_evidence(self):
+        docs = self.root / "knowledge" / "findings"
+        docs.mkdir(parents=True)
+        (docs / "case-story-map.md").write_text(
+            "---\ntype: Story Map\nstatus: pending-review\ntimestamp: 2026-01-15T11:00:00Z\n---\n"
+        )
+        agent = self.root / ".claude" / "agents" / "qe-analysis-agent.md"
+        agent.parent.mkdir(parents=True)
+        agent.write_text("---\nname: qe-analysis-agent\n---\n")
+        for run in ("r1", "r2"):
+            activity.record(self.journal, "tree", "qe-manual", run, "run-start",
+                            agent="qe-analysis-agent", now=NOW - timedelta(minutes=5))
+        activity.record(self.journal, "tree", "qe-manual", "r1", "run-exit",
+                        agent="qe-analysis-agent", now=NOW)
+        state = sources.snapshot(self.root, journal=self.journal, now=NOW)
+        status = {lane["id"]: lane["status"] for lane in state["lanes"]}
+        self.assertEqual(status["qe-analysis-agent"], "waiting")
+        self.assertEqual(status["qe-manual:tree:r1:"], "done")
+        self.assertEqual(status["qe-manual:tree:r2:"], "working")
+        later = sources.snapshot(self.root, journal=self.journal, now=NOW + timedelta(minutes=30))
+        self.assertEqual(next(lane["status"] for lane in later["lanes"]
+                              if lane["id"].endswith(":r2:")), "unknown")
 
-def start(minutes_ago: float, repo: str = "me/qe-as-a-service") -> dict:
-    return {"type": "session.start", "timestamp": ts(minutes_ago),
-            "data": {"context": {"repository": repo, "cwd": "/x/" + repo.split("/")[-1], "branch": "main"}}}
+    def test_start_and_exit_from_an_actual_child_process(self):
+        with patch.object(activity, "scope", return_value=(self.journal, "worktree")):
+            exit_code = qe_run.launch("incident-agent", "qe-manual",
+                                      [sys.executable, "-c", "raise SystemExit(4)"], cwd=self.root)
+        self.assertEqual(exit_code, 4)
+        state = sources.snapshot(self.root, journal=self.journal)
+        self.assertEqual([e["status"] for e in state["timeline"]], ["working", "failed"])
+        self.assertEqual(len({e["lane"] for e in state["timeline"]}), 1)
 
+    def test_writes_are_concurrent_and_history_is_bounded(self):
+        activity.enable_copilot(self.journal, True)
+        with patch.object(activity, "MAX_EVENTS", 4), ThreadPoolExecutor(4) as threads:
+            list(threads.map(lambda n: activity.record(
+                self.journal, "tree", "copilot", f"run-{n}", "session-start", now=NOW), range(12)))
+        self.assertEqual(len(activity.read(self.journal, NOW)[1]), 4)
+        self.assertEqual(activity.read(self.journal, NOW + timedelta(days=8))[1], [])
 
-class JournalTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp())
-        make_repo(self.tmp)
-        self.journal = self.tmp / "activity.jsonl"
+    def test_replay_starts_with_pre_window_evidence(self):
+        activity.enable_copilot(self.journal, True)
+        for hours, kind in [(25, "session-start"), (1, "session-end")]:
+            activity.record(self.journal, "tree", "copilot", "s1", kind,
+                            now=NOW - timedelta(hours=hours))
+        state = sources.snapshot(self.root, journal=self.journal, now=NOW)
+        self.assertEqual(state["initial"]["copilot:tree:s1:"]["status"], "idle")
+        self.assertEqual([e["status"] for e in state["timeline"]], ["ended"])
 
-    def lanes(self, now: datetime = NOW) -> dict:
-        snap = s.snapshot(self.tmp, copilot_dir=self.tmp / "none", journal=self.journal, now=now)
-        return {lane["id"]: lane for lane in snap["lanes"]}
-
-    def test_dispatched_is_working_then_idles_after_ttl(self) -> None:
-        s.record_activity("builder-agent", "dispatched", "Build tests for PROJ-1",
-                          path=self.journal, ts=NOW - timedelta(minutes=5))
-        self.assertEqual(self.lanes()["builder-agent"]["status"], "working")
-        later = NOW + s.RUN_TTL
-        self.assertEqual(self.lanes(later)["builder-agent"]["status"], "idle")
-
-    def test_done_fades_to_idle(self) -> None:
-        s.record_activity("planning-agent", "done", "Story map written",
-                          path=self.journal, ts=NOW - timedelta(minutes=2))
-        self.assertEqual(self.lanes()["planning-agent"]["status"], "done")
-        self.assertEqual(self.lanes(NOW + s.DONE_TTL)["planning-agent"]["status"], "idle")
-
-    def test_rejects_unknown_status(self) -> None:
-        with self.assertRaises(ValueError):
-            s.record_activity("builder-agent", "sleeping", path=self.journal)
-
-    def test_pending_review_story_map_waits_for_human(self) -> None:
-        write(self.tmp / "knowledge/findings/2025-01-15-story-map.md",
-              f"---\ntype: Story Map\ntitle: Checkout\nstatus: pending-review\ntimestamp: {ts(10)}\n---\n")
-        lanes = self.lanes()
-        self.assertEqual(lanes["qe-analysis-agent"]["status"], "waiting")
-
-    def test_initial_seeds_replay_before_window(self) -> None:
-        s.record_activity("builder-agent", "done", "old run", path=self.journal, ts=NOW - timedelta(hours=30))
-        s.record_activity("builder-agent", "working", "new run", path=self.journal, ts=NOW - timedelta(hours=1))
-        snap = s.snapshot(self.tmp, copilot_dir=self.tmp / "none", journal=self.journal, now=NOW, hours=24)
-        self.assertEqual(snap["initial"]["builder-agent"]["label"], "old run")
-        self.assertEqual([e["label"] for e in snap["timeline"] if e["lane"] == "builder-agent"], ["new run"])
-
-
-class CopilotTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp())
-        s._CACHE.entries.clear()
-
-    def status(self, events: list, workspace: str = "", now: datetime = NOW) -> dict:
-        d = make_session(self.tmp, "sess-1", events, workspace)
-        parsed = s.parse_copilot_session(d)
-        lane = s.lane_status(parsed["timeline"], now, kind="copilot")
-        return {**parsed, **lane}
-
-    def test_open_turn_is_working(self) -> None:
-        lane = self.status([start(5), {"type": "user.message", "timestamp": ts(4), "data": {}},
-                            {"type": "tool.execution_start", "timestamp": ts(3),
-                             "data": {"toolName": "bash", "toolCallId": "a",
-                                      "arguments": {"description": "Run tests", "command": "secret"}}}])
-        self.assertEqual(lane["status"], "working")
-        self.assertNotIn("secret", json.dumps(lane["timeline"]))
-
-    def test_shutdown_is_ended(self) -> None:
-        lane = self.status([start(5), {"type": "session.shutdown", "timestamp": ts(1), "data": {}}])
-        self.assertEqual(lane["status"], "ended")
-
-    def test_ask_user_waits(self) -> None:
-        lane = self.status([start(5), {"type": "assistant.turn_start", "timestamp": ts(4), "data": {}},
-                            {"type": "tool.execution_start", "timestamp": ts(3),
-                             "data": {"toolName": "ask_user", "toolCallId": "q"}}])
-        self.assertEqual(lane["status"], "waiting")
-
-    def test_quick_permission_is_not_a_wait(self) -> None:
-        lane = self.status([start(5), {"type": "assistant.turn_start", "timestamp": ts(4), "data": {}},
-                            {"type": "permission.requested", "timestamp": ts(3), "data": {"requestId": "p"}},
-                            {"type": "permission.completed", "timestamp": ts(3), "data": {"requestId": "p"}}])
-        self.assertFalse(any(e["status"] == "waiting" for e in lane["timeline"]))
-
-    def test_slow_and_pending_permissions_wait(self) -> None:
-        lane = self.status([start(10), {"type": "assistant.turn_start", "timestamp": ts(9), "data": {}},
-                            {"type": "permission.requested", "timestamp": ts(8), "data": {"requestId": "p"}},
-                            {"type": "permission.completed", "timestamp": ts(6), "data": {"requestId": "p"}},
-                            {"type": "permission.requested", "timestamp": ts(2), "data": {"requestId": "q"}}])
-        waits = [e for e in lane["timeline"] if e["status"] == "waiting"]
-        self.assertEqual(len(waits), 2)
-        self.assertEqual(lane["status"], "waiting")
-
-    def test_block_scalar_workspace_name(self) -> None:
-        lane = self.status([start(5)], workspace="name: |-\n  QE agent twin\ncwd: /x\n")
-        self.assertEqual(lane["name"], "QE agent twin")
-
-    def test_stale_sessions_go_idle_and_filter_by_repo(self) -> None:
-        make_session(self.tmp, "stale", [start(120), {"type": "user.message", "timestamp": ts(119), "data": {}}])
-        make_session(self.tmp, "other", [start(5, repo="me/elsewhere"),
-                                         {"type": "user.message", "timestamp": ts(4), "data": {}}])
-        sessions = s.copilot_sessions(self.tmp, match="qe-as-a-service", now=NOW, window=timedelta(days=36500))
-        self.assertEqual([x["id"] for x in sessions], ["stale"])
-        self.assertEqual(sessions[0]["status"], "idle")
-        self.assertEqual(sessions[0]["activity"], "Inactive")
+    def test_server_serves_local_ui_and_journal_after_restart(self):
+        activity.record(self.journal, "tree", "qe-manual", "r1", "run-start",
+                        agent="incident-agent")
+        with patch.object(activity, "scope", return_value=(self.journal, "tree")):
+            httpd = server.serve(port=0, root=self.root)
+        worker = Thread(target=httpd.serve_forever)
+        worker.start()
+        try:
+            conn = HTTPConnection("127.0.0.1", httpd.server_port, timeout=5)
+            conn.request("GET", "/")
+            page = conn.getresponse()
+            self.assertEqual(page.status, 200)
+            self.assertIn(b"QEaaS Agent Twin", page.read())
+            conn.request("GET", "/api/state")
+            self.assertIn(b"qe-manual:tree:r1:", conn.getresponse().read())
+            conn.request("GET", "/api/state", headers={"Host": "not-local.example"})
+            self.assertEqual(conn.getresponse().status, 400)
+            conn.close()
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            worker.join()
 
 
 if __name__ == "__main__":

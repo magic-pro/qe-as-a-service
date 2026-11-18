@@ -101,19 +101,19 @@ def invoke_agent(agent: str, prompt: str) -> None:
     tracked execution with retries and visibility.
     """
     full_prompt = f"Use the {agent} subagent for this task.\n\n{prompt}"
-    subprocess.Popen(
-        ["claude", "-p", full_prompt],
-        env={**os.environ, "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY},
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    command = ["claude", "-p", full_prompt]
+    options = {"env": {**os.environ, "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY},
+               "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+    try:
+        from twin.qe_run import launch
+    except ModuleNotFoundError as exc:
+        if exc.name != "twin":
+            raise
+        # The Cloud Run image does not include the local dashboard.
+        subprocess.Popen(command, **options)
+    else:
+        launch(agent, "qe-webhook", command, cwd=Path.cwd(), background=True, **options)
     logger.info("Invoked agent: %s", agent)
-    try:  # best-effort: feeds the agent twin dashboard (python3 -m twin serve)
-        from twin.sources import record_activity
-
-        record_activity(agent, "dispatched", prompt.strip().splitlines()[0] if prompt.strip() else "", source="webhook")
-    except Exception:  # noqa: BLE001 — the dashboard must never break dispatch
-        logger.debug("Could not record twin activity for %s", agent, exc_info=True)
 
 
 def record_signal(source: str, payload: dict[str, Any], **kwargs: Any) -> Optional[Path]:

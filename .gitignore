@@ -34,5 +34,5 @@ knowledge/signals/*/*.md
 knowledge/findings/*.md
 !knowledge/findings/index.md
 
-# Agent twin activity journal (python3 -m twin)
+# Legacy Agent Twin journal (no longer read)
 knowledge/agent-activity.jsonl

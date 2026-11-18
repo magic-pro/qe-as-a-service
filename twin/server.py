@@ -11,7 +11,7 @@ import json
 from functools import partial
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from twin import sources
@@ -39,6 +39,10 @@ class TwinHandler(BaseHTTPRequestHandler):
         self._send(code, json.dumps(payload).encode(), "application/json")
 
     def do_GET(self) -> None:  # noqa: N802
+        host = self.headers.get("Host", "").partition(":")[0].lower()
+        if host not in {"127.0.0.1", "localhost"}:
+            self._json({"error": "dashboard requires a loopback host"}, 400)
+            return
         url = urlparse(self.path)
         if url.path in ("/", "/index.html"):
             self._send(200, INDEX.read_bytes(), "text/html; charset=utf-8")
@@ -49,9 +53,7 @@ class TwinHandler(BaseHTTPRequestHandler):
                 hours = 24
             self._json(sources.snapshot(
                 self.options["root"],
-                copilot_dir=self.options["copilot_dir"],
-                copilot_match=self.options["copilot_match"],
-                copilot_limit=self.options["copilot_limit"],
+                journal=self.options["journal"],
                 hours=hours,
             ))
         elif url.path == "/api/health":
@@ -60,9 +62,7 @@ class TwinHandler(BaseHTTPRequestHandler):
             self._json({"error": "not found"}, 404)
 
 
-def serve(host: str = "127.0.0.1", port: int = 8787, *, root: Path = sources.REPO_ROOT,
-          copilot_dir: Path = sources.COPILOT_STATE_DIR, copilot_match: Optional[str] = None,
-          copilot_limit: int = 12) -> ThreadingHTTPServer:
-    options = {"root": root, "copilot_dir": copilot_dir,
-               "copilot_match": copilot_match, "copilot_limit": copilot_limit}
-    return ThreadingHTTPServer((host, port), partial(TwinHandler, options=options))
+def serve(port: int = 8787, *, root: Path = sources.REPO_ROOT) -> ThreadingHTTPServer:
+    scoped = sources.activity.scope(root)
+    options = {"root": root, "journal": scoped[0] if scoped else None}
+    return ThreadingHTTPServer(("127.0.0.1", port), partial(TwinHandler, options=options))
