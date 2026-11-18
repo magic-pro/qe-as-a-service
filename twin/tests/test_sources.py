@@ -4,14 +4,17 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from http.client import HTTPConnection
+from io import StringIO
 from pathlib import Path
 from threading import Thread
 from unittest.mock import patch
 
 from twin import activity, copilot_hook, qe_run, server, sources
+from twin.__main__ import main
 
 NOW = datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc)
 
@@ -95,6 +98,43 @@ class TwinTests(unittest.TestCase):
         state = sources.snapshot(self.root, journal=self.journal)
         self.assertEqual([e["status"] for e in state["timeline"]], ["working", "failed"])
         self.assertEqual(len({e["lane"] for e in state["timeline"]}), 1)
+
+    def test_build_report_is_attributed_to_its_specialist(self):
+        definitions = self.root / ".claude" / "agents"
+        definitions.mkdir(parents=True)
+        findings = self.root / "knowledge" / "findings"
+        findings.mkdir(parents=True)
+        for agent in ("builder-agent", "security-builder-executor", "performance-builder-executor"):
+            (definitions / (agent + ".md")).write_text(f"---\nname: {agent}\n---\n")
+        for agent in ("security-builder-executor", "performance-builder-executor"):
+            (findings / (agent + "-build-report.md")).write_text(
+                f"---\ntype: Build Report\ngenerated_by: {agent}\ntimestamp: 2026-01-15T11:00:00Z\n---\n"
+            )
+        state = sources.snapshot(self.root, journal=self.journal, now=NOW)
+        self.assertCountEqual([ev["lane"] for ev in state["timeline"]],
+                              ["security-builder-executor", "performance-builder-executor"])
+
+    def test_launcher_defaults_to_copilot_and_forwards_model(self):
+        with patch.object(qe_run, "launch", return_value=0) as launch:
+            self.assertEqual(main(["run", "--model", "auto", "--read-only",
+                                   "incident-agent", "Assess synthetic inputs"]), 0)
+        launch.assert_called_once_with(
+            "incident-agent", "qe-copilot",
+            ["copilot", "--agent", "incident-agent", "-p", "Assess synthetic inputs",
+             "--model", "auto", "--disable-builtin-mcps", "--available-tools", "view", "grep", "glob"],
+            cwd=sources.REPO_ROOT,
+        )
+
+    def test_legacy_launcher_is_explicit_and_rejects_copilot_model(self):
+        with patch.object(qe_run, "launch", return_value=4) as launch:
+            self.assertEqual(main(["run", "--runtime", "claude",
+                                   "incident-agent", "Assess synthetic inputs"]), 4)
+            self.assertEqual(launch.call_args.args[2][0], "claude")
+            with redirect_stderr(StringIO()) as stderr, self.assertRaises(SystemExit):
+                main(["run", "--runtime", "claude", "--model", "auto",
+                      "incident-agent", "Assess synthetic inputs"])
+            self.assertIn("only supported with the Copilot runtime", stderr.getvalue())
+            self.assertEqual(launch.call_count, 1)
 
     def test_writes_are_concurrent_and_history_is_bounded(self):
         activity.enable_copilot(self.journal, True)

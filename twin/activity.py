@@ -20,6 +20,7 @@ KINDS = {
     "copilot": {"session-start", "session-resume", "turn-start", "turn-stop",
                 "session-end", "session-error", "subagent-start", "subagent-stop"},
     "qe-manual": {"run-start", "run-exit", "run-failed"},
+    "qe-copilot": {"run-start", "run-exit", "run-failed"},
     "qe-webhook": {"run-start", "run-exit", "run-failed"},
 }
 SCHEMA = """

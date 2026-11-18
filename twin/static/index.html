@@ -106,7 +106,7 @@
 (() => {
   const COLORS = { working: '#22d3ee', waiting: '#fbbf24', done: '#4ade80', failed: '#f87171', idle: '#64748b', ended: '#334155', unknown: '#94a3b8' };
   const LABELS = { working: 'Working', waiting: 'Needs review', done: 'Done', failed: 'Failed', idle: 'Idle', ended: 'Ended', unknown: 'Unconfirmed' };
-  const SOURCE = { copilot: 'Copilot hook', 'qe-manual': 'Local QE launcher', 'qe-webhook': 'Local webhook', okf: 'OKF artifact', 'log.md': 'QE change log' };
+  const SOURCE = { copilot: 'Copilot hook', 'qe-copilot': 'QE launcher · Copilot CLI', 'qe-manual': 'QE launcher · Claude Code', 'qe-webhook': 'Local webhook', okf: 'OKF artifact', 'log.md': 'QE change log' };
   const SOURCE_STATE = { disabled: 'Capture disabled', unobserved: 'No events observed', unavailable: 'Source unavailable', observed: 'Events observed' };
   const POLL_MS = 3000;
 

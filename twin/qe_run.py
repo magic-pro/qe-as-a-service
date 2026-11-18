@@ -1,4 +1,4 @@
-"""Observe local Claude Code processes without changing their tool permissions."""
+"""Observe local QE agent processes without changing their tool permissions."""
 
 from __future__ import annotations
 

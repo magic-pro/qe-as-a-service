@@ -2,7 +2,7 @@
 
     python3 -m twin serve [--port 8787]
     python3 -m twin copilot enable
-    python3 -m twin run <agent> "<prompt>"
+    python3 -m twin run [--model MODEL] <agent> "<prompt>"
     python3 -m twin snapshot
 """
 
@@ -40,10 +40,19 @@ def _cmd_copilot(args: argparse.Namespace) -> int:
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    command = ["claude", "--agent", args.agent, "-p", args.prompt]
+    copilot = args.runtime == "copilot"
+    if args.model and not copilot:
+        raise ValueError("--model is only supported with the Copilot runtime")
+    command = ["copilot" if copilot else "claude", "--agent", args.agent, "-p", args.prompt]
+    if args.model:
+        command.extend(["--model", args.model])
     if args.read_only:
-        command.extend(["--tools", "", "--strict-mcp-config"])
-    result = qe_run.launch(args.agent, "qe-manual", command, cwd=sources.REPO_ROOT)
+        if copilot:
+            command.extend(["--disable-builtin-mcps", "--available-tools", "view", "grep", "glob"])
+        else:
+            command.extend(["--tools", "", "--strict-mcp-config"])
+    result = qe_run.launch(args.agent, "qe-copilot" if copilot else "qe-manual",
+                           command, cwd=sources.REPO_ROOT)
     assert result is not None
     return result
 
@@ -66,11 +75,13 @@ def main(argv: "list[str] | None" = None) -> int:
     p.add_argument("action", choices=("enable", "disable"))
     p.set_defaults(func=_cmd_copilot)
 
-    p = sub.add_parser("run", help="observe a local QE agent run via Claude Code")
+    p = sub.add_parser("run", help="launch and observe a local QE agent (defaults to Copilot CLI)")
     p.add_argument("agent", choices=sorted(path.stem for path in
                                            (sources.REPO_ROOT / ".claude/agents").glob("*.md")))
     p.add_argument("prompt")
-    p.add_argument("--read-only", action="store_true", help="disable Claude Code tools and MCP servers")
+    p.add_argument("--runtime", choices=("copilot", "claude"), default="copilot")
+    p.add_argument("--model", help="Copilot model ID, or 'auto'; omit to use the CLI default")
+    p.add_argument("--read-only", action="store_true", help="restrict Copilot to file reads or disable Claude tools")
     p.set_defaults(func=_cmd_run)
 
     p = sub.add_parser("snapshot", help="print the twin state as JSON")
@@ -80,7 +91,7 @@ def main(argv: "list[str] | None" = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args)
-    except (OSError, sqlite3.Error) as exc:
+    except (OSError, sqlite3.Error, ValueError) as exc:
         parser.exit(1, f"QE Twin: {exc}\n")
 
 

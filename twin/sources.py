@@ -22,9 +22,9 @@ LIFECYCLE = {
     "session-error": ("unknown", "Session reported an error"),
     "subagent-start": ("working", "Subagent started"),
     "subagent-stop": ("ended", "Subagent stopped"),
-    "run-start": ("working", "Claude Code process started"),
-    "run-exit": ("done", "Claude Code exited successfully"),
-    "run-failed": ("failed", "Claude Code failed to start or exited unsuccessfully"),
+    "run-start": ("working", "Agent process started"),
+    "run-exit": ("done", "Agent process exited successfully"),
+    "run-failed": ("failed", "Agent process failed to start or exited unsuccessfully"),
 }
 
 # OKF doc type → QE agent that produces it.
@@ -44,6 +44,7 @@ DOC_TYPE_AGENT = {
 SIGNAL_TYPES = {"Jira Story", "Jira Bug", "Jira Epic", "GitHub CI Failure",
                 "GitHub Pull Request", "GCP Log Pattern"}
 SIGNAL_LANE = "signal-inbox"
+SPECIALIST_BUILDERS = {"security-builder-executor", "performance-builder-executor"}
 
 KNOWLEDGE_DIRS = ("knowledge", "docs/knowledge", "artifacts", "e2e/runs")
 LOG_DIRS = ("knowledge", "repo-templates", "e2e")
@@ -170,6 +171,8 @@ def _doc_events(root: Path) -> Iterable[dict[str, Any]]:
                 label = f"Signal recorded: {doc_type}"
             else:
                 lane = DOC_TYPE_AGENT.get(doc_type)
+                if doc_type == "Build Report" and meta.get("generated_by") in SPECIALIST_BUILDERS:
+                    lane = meta["generated_by"]
                 if not lane and path.name.endswith("-story-map.md"):
                     lane = "qe-analysis-agent"
                 if not lane and path.name.endswith("-build-report.md"):

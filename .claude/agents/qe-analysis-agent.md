@@ -125,7 +125,7 @@ Review each service section above and complete the following for each signal you
 
 **After completing this table:**
 1. Change `status: pending-review` → `status: approved` in the frontmatter
-2. Run `/build-tests --story-map knowledge/findings/<this-file>` to invoke the Builder Agent
+2. Run `/build-tests --story-map knowledge/findings/<this-file>` for general rows, or select the matching specialist for rows assigned to a track.
 ```
 
 ## Human Gate (mandatory)
@@ -135,7 +135,9 @@ Never invoke the Builder Agent yourself. Never change `status` to `approved`. Th
 - Decides: new test, assertion update, or skip
 - Sets `status: approved` in the frontmatter
 
-Only after `status: approved` is set does the Builder Agent become the correct next step.
+Only after `status: approved` is set may a human invoke the Builder Agent or a specialist.
+
+For signals assigned to a specialist, include `track: security` or `track: performance` in the decision-table Notes, along with the applicable Planning artifact and criteria. Identify the matching Builder & Executor for the human reviewer; do not invoke it yourself. Follow `docs/security-performance-handoff.md`.
 
 ## Finance Constraints
 

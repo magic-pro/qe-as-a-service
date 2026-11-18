@@ -21,6 +21,8 @@ Analyse inputs (BRD, Jira story, architecture diagram) and produce four structur
 
 Read the cross-cutting templates in `artifacts/` and the per-repo templates in `repo-templates/<repo>/.qe/` before writing. Follow the structure exactly.
 
+When requirements include security controls or performance budgets, record the test target, synthetic fixture, measurable acceptance criteria, and source in the Test Strategy. For performance, also capture workload, warm-up, sample size, concurrency cap, time limit and reference environment. Mark missing criteria explicitly. QE Analysis uses the [security and performance handoff](../../docs/security-performance-handoff.md) to submit these scenarios for human approval.
+
 ## OKF Knowledge Contract
 
 All inputs and outputs are OKF docs (markdown + YAML frontmatter). Rules: `okf/conventions.md`.

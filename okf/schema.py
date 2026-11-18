@@ -26,6 +26,8 @@ SIGNAL_TYPES = {
 
 # Agent outputs derived from a signal — must carry `derived_from`.
 FINDING_TYPES = {
+    "Story Map",
+    "Build Report",
     "Map Update",
     "Coverage Gap",
     "Incident RCA",

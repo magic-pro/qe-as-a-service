@@ -40,6 +40,7 @@ frameworks/<lang>/
 ### Step 1: Parse the approved Story Map
 
 Read the `## 🔍 Human Review Required` decision table. Extract only rows where `Decision` is `Build new test` or `Update assertion`. Skip rows marked `Skip`.
+Skip rows whose Notes assign `track: security` or `track: performance`; those belong to the specialists in `docs/security-performance-handoff.md`.
 
 For each actioned signal, note:
 - Signal key and type (proto-merge / incident / jira-story)
