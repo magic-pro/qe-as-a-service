@@ -265,6 +265,24 @@ Applied by every agent, baked into every agent prompt:
 
 ---
 
+## Agent Twin Dashboard
+
+A live "studio" view of every QE agent plus your GitHub Copilot sessions for this repo — who is working, who is waiting on you, and what just finished. Zero dependencies (Python 3.9+ stdlib).
+
+```bash
+python3 -m twin serve            # open http://127.0.0.1:8787
+python3 -m twin serve --all-copilot   # include Copilot sessions from every repo
+```
+
+- **Live status:** each agent in `.claude/agents/` and `repo-templates/*/.claude/agents/` gets a studio. Status comes from `knowledge/agent-activity.jsonl` (written by the webhook receiver and `python3 -m twin event`), OKF docs (a `pending-review` Story Map shows as *Needs you*), `log.md` lines, and `~/.copilot/session-state` (tool names/descriptions only, never prompt text).
+- **Day/night:** the sky and studio lighting follow your local clock.
+- **Screensaver:** press **F** (or 🖥) for full screen; controls hide after 4 s idle.
+- **Replay:** press **R** to scrub or play back the last 24 h at 60–3600×.
+- **Report activity manually:** `python3 -m twin event <agent> <working|waiting|done|failed|idle> "message"`.
+- **JSON:** `python3 -m twin snapshot` or `GET /api/state?hours=24`.
+
+Tune with `QE_TWIN_ACTIVITY_LOG` (journal path) and `QE_TWIN_RUN_TTL_MINUTES` (default 30; a run with no update for this long shows as idle). Tests: `python3 -m unittest discover -s twin/tests -t .`
+
 ## MCP Servers
 
 Configured in `.mcp.json`. Honest state of each integration:

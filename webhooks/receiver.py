@@ -108,6 +108,12 @@ def invoke_agent(agent: str, prompt: str) -> None:
         stderr=subprocess.DEVNULL,
     )
     logger.info("Invoked agent: %s", agent)
+    try:  # best-effort: feeds the agent twin dashboard (python3 -m twin serve)
+        from twin.sources import record_activity
+
+        record_activity(agent, "dispatched", prompt.strip().splitlines()[0] if prompt.strip() else "", source="webhook")
+    except Exception:  # noqa: BLE001 — the dashboard must never break dispatch
+        logger.debug("Could not record twin activity for %s", agent, exc_info=True)
 
 
 def record_signal(source: str, payload: dict[str, Any], **kwargs: Any) -> Optional[Path]:

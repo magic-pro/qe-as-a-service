@@ -33,3 +33,6 @@ e2e/runs/
 knowledge/signals/*/*.md
 knowledge/findings/*.md
 !knowledge/findings/index.md
+
+# Agent twin activity journal (python3 -m twin)
+knowledge/agent-activity.jsonl
