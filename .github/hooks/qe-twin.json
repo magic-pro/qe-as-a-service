@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "SessionStart": [{"type": "command", "command": "python3 -m twin.copilot_hook SessionStart", "timeoutSec": 4}],
+    "SessionEnd": [{"type": "command", "command": "python3 -m twin.copilot_hook SessionEnd", "timeoutSec": 4}],
+    "UserPromptSubmit": [{"type": "command", "command": "python3 -m twin.copilot_hook UserPromptSubmit", "timeoutSec": 4}],
+    "PreToolUse": [{"type": "command", "command": "python3 -m twin.copilot_hook PreToolUse", "timeoutSec": 4}],
+    "Stop": [{"type": "command", "command": "python3 -m twin.copilot_hook Stop", "timeoutSec": 4}],
+    "ErrorOccurred": [{"type": "command", "command": "python3 -m twin.copilot_hook ErrorOccurred", "timeoutSec": 4}],
+    "SubagentStart": [{"type": "command", "command": "python3 -m twin.copilot_hook SubagentStart", "timeoutSec": 4}],
+    "SubagentStop": [{"type": "command", "command": "python3 -m twin.copilot_hook SubagentStop", "timeoutSec": 4}]
+  }
+}

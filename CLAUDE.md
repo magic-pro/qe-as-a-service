@@ -153,6 +153,17 @@ Deploy webhook receiver: `deploy/cloud-run/deploy.sh`
 - **Decimal precision**: monetary values tested to correct decimal places per currency
 - **Regulatory impact**: flagged on all outputs where applicable
 
+## Agent Twin (activity reporting)
+
+When running as a QE agent, report your progress to the agent twin dashboard so humans can see it live:
+
+```bash
+python3 -m twin event <your-agent-name> working "<one-line task summary>"   # at start
+python3 -m twin event <your-agent-name> done "<one-line outcome>"           # or: failed / waiting
+```
+
+Use `waiting` when you are blocked on a human approval gate. Never put PII, secrets, or ticket bodies in the message.
+
 ## MCP Servers
 
 Configured in `.mcp.json`:

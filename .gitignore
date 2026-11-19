@@ -33,3 +33,6 @@ e2e/runs/
 knowledge/signals/*/*.md
 knowledge/findings/*.md
 !knowledge/findings/index.md
+
+# Legacy Agent Twin journal (no longer read)
+knowledge/agent-activity.jsonl

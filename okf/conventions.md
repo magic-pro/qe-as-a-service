@@ -38,7 +38,7 @@ Frontmatter in maps must not contain `|` or the word `float`, because the eval s
 |---|---|---|
 | Signals | `Jira Story`, `Jira Bug`, `Jira Epic`, `GitHub CI Failure`, `GitHub Pull Request`, `GCP Log Pattern` | `okf/normalize.py` (from `webhooks/receiver.py`) |
 | Maps | `Data Type Map`, `Identity Map`, `Domain Map`, `Test Strategy`, `Infra Map` | Planning Agent |
-| Findings | `Map Update`, `Coverage Gap`, `Incident RCA`, `Regression Test Request` | Planning, Coverage and Incident agents |
+| Findings | `Map Update`, `Coverage Gap`, `Incident RCA`, `Regression Test Request`, `Story Map`, `Build Report` | Planning, Coverage, Incident, QE Analysis and Builder agents |
 | Tooling | `Agent`, `Command` | Humans (`.claude/`) |
 | Docs | `Index`, `Log`, `Architecture`, `Conventions`, `Design Spec`, `Implementation Plan` | Humans |
 
