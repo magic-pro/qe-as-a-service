@@ -1,4 +1,27 @@
 services:
+  qe-agents:
+    profiles: ["agents"]
+    build:
+      context: .
+      dockerfile: agent_service/Dockerfile
+    ports:
+      - "127.0.0.1:8083:8080"
+    environment:
+      QE_AGENT_RUNTIME: ${QE_AGENT_RUNTIME:-copilot}
+      COPILOT_GITHUB_TOKEN: ${COPILOT_GITHUB_TOKEN:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      QE_AGENT_BASE_URL: http://127.0.0.1:8083
+      QE_AGENT_LOG_DIR: /home/qe/agent-logs
+      QE_A2A_CLIENT_KEYS: ${QE_A2A_CLIENT_KEYS:-}
+    volumes:
+      - ./knowledge:/app/knowledge
+      - qe-agent-logs:/home/qe/agent-logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   mock-jira:
     image: wiremock/wiremock:3.10.0
     volumes:
@@ -20,3 +43,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+volumes:
+  qe-agent-logs:

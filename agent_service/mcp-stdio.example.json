@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "qe-agents-local": {
+      "type": "local",
+      "command": ".venv/bin/python",
+      "args": ["-m", "agent_service.stdio"],
+      "tools": ["*"]
+    }
+  }
+}

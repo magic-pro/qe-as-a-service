@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+*.pem
+*.key
+service-account*.json
+gcp-sa*.json
+.claude/settings.local.json
+.venv
+venv
+**/__pycache__
+**/node_modules
+knowledge
