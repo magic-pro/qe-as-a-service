@@ -1,0 +1,32 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: qe-agents
+  annotations:
+    run.googleapis.com/ingress: internal
+    run.googleapis.com/invoker-iam-disabled: "false"
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      serviceAccountName: qe-webhook-sa@REPLACE_GCP_PROJECT_ID.iam.gserviceaccount.com
+      containerConcurrency: 1
+      timeoutSeconds: 300
+      containers:
+        - image: REPLACE_GCP_REGION-docker.pkg.dev/REPLACE_GCP_PROJECT_ID/qe-as-a-service/qe-agents:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: QE_AGENT_RUNTIME
+              value: copilot
+            - name: COPILOT_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: copilot-github-token
+                  key: latest
+          resources:
+            limits:
+              cpu: "2"
+              memory: 2Gi

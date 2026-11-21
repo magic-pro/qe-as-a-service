@@ -37,6 +37,11 @@ flowchart TD
 
 Every arrow carries an OKF doc: markdown with typed frontmatter. Conventions are in [../okf/conventions.md](../okf/conventions.md), and the bundle entry point is [../knowledge/index.md](../knowledge/index.md).
 
+The optional [agent network service](agent-service.md) exposes the repository's
+agent definitions over MCP and A2A. It is separate from the webhook receiver;
+the local stdio endpoint exposes all seven, while the two local-only
+specialist agents cannot execute remotely.
+
 ---
 
 ## Versions
